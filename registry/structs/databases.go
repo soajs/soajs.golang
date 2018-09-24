@@ -1,9 +1,6 @@
 package structs
 
-type Databases struct {
-  CoreDBs        map[string]Database
-  TenantMetaDBs  map[string]Database
-}
+type Databases map[string]Database
 
 type Database struct {
     Name                    string                  `json:"name"`

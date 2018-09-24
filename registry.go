@@ -29,9 +29,44 @@ type RegistryApiResponse struct {
 var registry_struct map[string]structs.Registry
 var regObj RegistryObj
 
-// func (reg *RegistryObj) GetDatabase(dbName string) (nterface) {
-//   return db
-// }
+/**
+ * Check if the environment registry exists
+ *
+ */
+func DetectEnvRegistry(reg *RegistryObj) (error) {
+    if reg.Env == "" || registry_struct[reg.Env].Environment == "" {
+      return errors.New("Environment registry not found")
+    }
+
+    return nil
+}
+
+/**
+ * Get one database
+ * @param  {String}     dbName
+ * @return {Database}
+ */
+func (reg *RegistryObj) GetDatabase(dbName string) (structs.Database, error) {
+  var database structs.Database
+
+  if dbName == "" {
+    return database, errors.New("Database name is required")
+  }
+
+  if err := DetectEnvRegistry(reg); err != nil {
+      return database, err
+  }
+
+  if len(registry_struct[reg.Env].CoreDBs) > 0 && registry_struct[reg.Env].CoreDBs[dbName].Name != "" {
+      database = registry_struct[reg.Env].CoreDBs[dbName]
+  } else if len(registry_struct[reg.Env].TenantMetaDBs) > 0 && registry_struct[reg.Env].TenantMetaDBs[dbName].Name != "" {
+      database = registry_struct[reg.Env].TenantMetaDBs[dbName]
+  } else {
+      return database, errors.New("Database not found")
+  }
+
+  return database, nil
+}
 
 /**
  * Get all databases
@@ -40,16 +75,18 @@ var regObj RegistryObj
  */
 func (reg *RegistryObj) GetDatabases() (structs.Databases, error) {
   var databases structs.Databases
-  if reg.Env == "" || registry_struct[reg.Env].Environment == "" {
-    return databases, errors.New("Environment registry not found")
+  if err := DetectEnvRegistry(reg); err != nil {
+      return databases, err
   }
 
   if len(registry_struct[reg.Env].CoreDBs) > 0 {
-    databases.CoreDBs = registry_struct[reg.Env].CoreDBs
+    databases = registry_struct[reg.Env].CoreDBs
   }
 
   if len(registry_struct[reg.Env].TenantMetaDBs) > 0 {
-    databases.TenantMetaDBs = registry_struct[reg.Env].TenantMetaDBs
+    for dbName, dbConfig := range registry_struct[reg.Env].TenantMetaDBs {
+        databases[dbName] = dbConfig
+    }
   }
 
   return databases, nil
@@ -62,8 +99,8 @@ func (reg *RegistryObj) GetDatabases() (structs.Databases, error) {
  */
 func (reg *RegistryObj) GetServiceConfig() (structs.ServiceConfig, error) {
   var serviceConfig structs.ServiceConfig
-  if reg.Env == "" || registry_struct[reg.Env].Environment == "" {
-    return serviceConfig, errors.New("Environment registry not found")
+  if err := DetectEnvRegistry(reg); err != nil {
+      return serviceConfig, err
   }
 
   serviceConfig = registry_struct[reg.Env].ServiceConfig
@@ -77,8 +114,8 @@ func (reg *RegistryObj) GetServiceConfig() (structs.ServiceConfig, error) {
  */
 func (reg *RegistryObj) GetDeployer() (structs.Deployer, error) {
   var deployer structs.Deployer
-  if reg.Env == "" || registry_struct[reg.Env].Environment == "" {
-    return deployer, errors.New("Environment registry not found")
+  if err := DetectEnvRegistry(reg); err != nil {
+      return deployer, err
   }
 
   deployer = registry_struct[reg.Env].Deployer
@@ -92,8 +129,8 @@ func (reg *RegistryObj) GetDeployer() (structs.Deployer, error) {
  */
 func (reg *RegistryObj) GetCustom() (structs.CustomRegistry, error) {
   var customRegistry structs.CustomRegistry
-  if reg.Env == "" || registry_struct[reg.Env].Environment == "" {
-    return customRegistry, errors.New("Environment registry not found")
+  if err := DetectEnvRegistry(reg); err != nil {
+      return customRegistry, err
   }
 
   customRegistry = registry_struct[reg.Env].Custom
@@ -112,8 +149,8 @@ func (reg *RegistryObj) GetResource(resourceName string) (structs.Resource, erro
     return resource, errors.New("Resource name is required")
   }
 
-  if reg.Env == "" || registry_struct[reg.Env].Environment == "" {
-    return resource, errors.New("Environment registry not found")
+  if err := DetectEnvRegistry(reg); err != nil {
+      return resource, err
   }
 
   if len(registry_struct[reg.Env].Resources) == 0 || registry_struct[reg.Env].Resources[resourceName].Id == "" {
@@ -131,8 +168,8 @@ func (reg *RegistryObj) GetResource(resourceName string) (structs.Resource, erro
  */
 func (reg *RegistryObj) GetResources() (structs.Resources, error) {
   var resources structs.Resources
-  if reg.Env == "" || registry_struct[reg.Env].Environment == "" {
-    return resources, errors.New("Environment registry not found")
+  if err := DetectEnvRegistry(reg); err != nil {
+      return resources, err
   }
 
   resources = registry_struct[reg.Env].Resources
@@ -151,8 +188,8 @@ func (reg *RegistryObj) GetService(serviceName string) (structs.Service, error) 
     return service, errors.New("Service name is required")
   }
 
-  if reg.Env == "" || registry_struct[reg.Env].Environment == "" {
-    return service, errors.New("Environment registry not found")
+  if err := DetectEnvRegistry(reg); err != nil {
+      return service, err
   }
 
   if len(registry_struct[reg.Env].Services) == 0 || registry_struct[reg.Env].Services[serviceName].Group == "" {
@@ -170,8 +207,8 @@ func (reg *RegistryObj) GetService(serviceName string) (structs.Service, error) 
  */
 func (reg *RegistryObj) GetServices() (structs.Services, error) {
   var services structs.Services
-  if reg.Env == "" || registry_struct[reg.Env].Environment == "" {
-    return services, errors.New("Environment registry not found")
+  if err := DetectEnvRegistry(reg); err != nil {
+      return services, err
   }
 
   services = registry_struct[reg.Env].Services
@@ -190,8 +227,8 @@ func (reg *RegistryObj) GetDaemon(daemonName string) (structs.Daemon, error) {
     return daemon, errors.New("Daemon name is required")
   }
 
-  if reg.Env == "" || registry_struct[reg.Env].Environment == "" {
-    return daemon, errors.New("Environment registry not found")
+  if err := DetectEnvRegistry(reg); err != nil {
+      return daemon, err
   }
 
   if len(registry_struct[reg.Env].Daemons) == 0 || registry_struct[reg.Env].Daemons[daemonName].Group == "" {
@@ -209,8 +246,8 @@ func (reg *RegistryObj) GetDaemon(daemonName string) (structs.Daemon, error) {
  */
 func (reg *RegistryObj) GetDaemons() (structs.Daemons, error) {
   var daemons structs.Daemons
-  if reg.Env == "" || registry_struct[reg.Env].Environment == "" {
-    return daemons, errors.New("Environment registry not found")
+  if err := DetectEnvRegistry(reg); err != nil {
+      return daemons, err
   }
 
   daemons = registry_struct[reg.Env].Daemons
