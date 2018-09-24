@@ -48,13 +48,3 @@ type SOAJSData struct {
   Urac                      map[string]string         `json:"urac"`
   Awareness                 Awareness                 `json:"awareness"`
 }
-
-type SOAJSObject struct {
-  Tenant                    Tenant                    `json:"tenant"`
-  Urac                      map[string]string         `json:"urac"`
-  ServicesConfig            map[string]string         `json:"servicesConfig"`
-  Device                    string                    `json:"device"`
-  Geo                       map[string]string         `json:"geo"`
-  Awareness                 Awareness                 `json:"awareness"`
-  Controller                string                    `json:"controller"`
-}

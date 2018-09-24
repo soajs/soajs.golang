@@ -11,6 +11,17 @@ import (
     "encoding/json"
 )
 
+type SOAJSObject struct {
+  Tenant                    Tenant                    `json:"tenant"`
+  Urac                      map[string]string         `json:"urac"`
+  ServicesConfig            map[string]string         `json:"servicesConfig"`
+  Device                    string                    `json:"device"`
+  Geo                       map[string]string         `json:"geo"`
+  Awareness                 Awareness                 `json:"awareness"`
+  Controller                string                    `json:"controller"`
+  Reg                       RegistryObj               `json:"reg"`
+}
+
 func mapInjectedObject(r *http.Request) SOAJSData {
     soajsHeader := r.Header.Get("soajsinjectobj")
 
@@ -92,6 +103,10 @@ func SoajsMiddleware(next http.Handler) http.Handler {
         middlewareOutput.Device = injectObject.Device
         middlewareOutput.Geo = injectObject.Geo
         middlewareOutput.Awareness = injectObject.Awareness
+
+        if os.Getenv("SOAJS_REGISTRY_API") != "" && os.Getenv("SOAJS_ENV") != "" {
+            middlewareOutput.Reg = regObj
+        }
 
         soajs := context.WithValue(r.Context(), "soajs", middlewareOutput)
         r = r.WithContext(soajs)
