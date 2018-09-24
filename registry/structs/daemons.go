@@ -12,4 +12,4 @@ type DaemonVersion struct {
     Jobs            map[string]DaemonJob        `json:"jobs"`
 }
 
-type DaemonJob map[string]interface
+type DaemonJob map[string]interface{}

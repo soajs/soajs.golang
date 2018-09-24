@@ -12,5 +12,5 @@ type Resource struct {
   Locked        bool            `json:"locked"`
   Plugged       bool            `json:"plugged"`
   Shared        bool            `json:"shared"`
-  Config        interface       `json:"config"`
+  Config        interface{}     `json:"config"`
 }

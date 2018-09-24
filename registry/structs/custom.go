@@ -8,7 +8,7 @@ type CustomRegistry struct {
 	Locked         bool            `json:"locked"`
 	Plugged        bool            `json:"plugged"`
 	Shared         bool            `json:"shared"`
-	Value          interface       `json:"value"`
+	Value          interface{}     `json:"value"`
 	Created        string          `json:"created"`
 	Author         string          `json:"author"`
 }

@@ -194,7 +194,7 @@ func (reg *RegistryObj) GetDaemon(daemonName string) (structs.Daemon, error) {
     return daemon, errors.New("Environment registry not found")
   }
 
-  if len(registry_struct[reg.Env].Daemons) == 0 || registry_struct[reg.Env].Daemons[daemonName].Id == "" {
+  if len(registry_struct[reg.Env].Daemons) == 0 || registry_struct[reg.Env].Daemons[daemonName].Group == "" {
     return daemon, errors.New("Daemon not found")
   }
 
