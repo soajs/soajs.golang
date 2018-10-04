@@ -26,8 +26,12 @@ type RegistryApiResponse struct {
   Data                      structs.Registry          `json:"data"`
 }
 
-var registry_struct map[string]structs.Registry
-var regObj RegistryObj
+var (
+    registry_struct map[string]structs.Registry
+    regObj RegistryObj
+)
+
+var autoReloadChannel = make(chan string)
 
 /**
  * Check if the environment registry exists
@@ -260,12 +264,14 @@ func (reg *RegistryObj) GetDaemons() (structs.Daemons, error) {
  * @return {Boolean}
  */
 func (reg *RegistryObj) Reload() (bool, error) {
-  if reg.Env == "" || registry_struct[reg.Env].Environment == "" {
+  if reg.Env == "" || reg.ServiceName == "" {
     return false, errors.New("Cannot reload registry. Env and ServiceName are not set.")
   }
 
   param := map[string]string{"envCode": reg.Env, "serviceName": reg.ServiceName}
-  go ExecRegistry(param) //TODO check return type of ExecRegistry
+  ExecRegistry(param) //TODO check return type of ExecRegistry
+
+  autoReloadChannel <- "reset"
 
   return true, nil
 }
@@ -309,11 +315,41 @@ func ExecRegistry(param map[string]string) {
 
   regObj.Env = param["envCode"];
   regObj.ServiceName = param["serviceName"];
+}
 
-  serviceConfig, _ := regObj.GetServiceConfig()
-  log.Println(serviceConfig)
-  //TODO assertion on service config content
+func AutoReload(param map[string]string) (chan string) {
+    ExecRegistry(param)
+    serviceConfig, _ := regObj.GetServiceConfig()
+    //TODO assertion on service config content
 
-  time.Sleep(time.Duration(serviceConfig.Awareness.AutoReloadRegistry) * time.Millisecond)
-  go ExecRegistry(param)
+    interval := time.Duration(serviceConfig.Awareness.AutoReloadRegistry) * time.Millisecond
+    ticker := time.NewTicker(interval)
+
+    go func() {
+        for {
+
+            select {
+            case <- ticker.C:
+                log.Println("Reloading ...")
+                go ExecRegistry(param)
+
+                serviceConfig, _ := regObj.GetServiceConfig()
+                interval = time.Duration(serviceConfig.Awareness.AutoReloadRegistry) * time.Millisecond
+                ticker = time.NewTicker(interval)
+            case msg := <- autoReloadChannel:
+                if msg == "stop" {
+                    ticker.Stop()
+                    return
+                } else if msg == "reset" {
+                    serviceConfig, _ := regObj.GetServiceConfig()
+                    interval = time.Duration(serviceConfig.Awareness.AutoReloadRegistry) * time.Millisecond
+                    ticker = time.NewTicker(interval)
+                }
+
+            }
+
+        }
+    }()
+
+    return autoReloadChannel
 }

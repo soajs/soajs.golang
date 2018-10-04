@@ -13,8 +13,8 @@ import (
 
 type SOAJSObject struct {
   Tenant                    Tenant                    `json:"tenant"`
-  Urac                      map[string]string         `json:"urac"`
-  ServicesConfig            map[string]string         `json:"servicesConfig"`
+  Urac                      Urac                      `json:"urac"`
+  ServicesConfig            map[string]interface{}    `json:"servicesConfig"`
   Device                    string                    `json:"device"`
   Geo                       map[string]string         `json:"geo"`
   Awareness                 Awareness                 `json:"awareness"`
@@ -22,12 +22,16 @@ type SOAJSObject struct {
   Reg                       RegistryObj               `json:"reg"`
 }
 
+var globalConfig map[string]string
+
 func mapInjectedObject(r *http.Request) SOAJSData {
     soajsHeader := r.Header.Get("soajsinjectobj")
 
     var input, output SOAJSData
     if inputType := reflect.TypeOf(soajsHeader).String(); inputType == "string" {
-        json.Unmarshal([]byte(soajsHeader), &input)
+        if jsonError := json.Unmarshal([]byte(soajsHeader), &input); jsonError != nil {
+            log.Println(jsonError)
+        }
     }
 
     // map information to output
@@ -62,7 +66,7 @@ func (a Awareness) GetHost(args ...string) string {
     host := a.Host
 
     if serviceName != "" && strings.ToLower(serviceName) != "controller" {
-        host += ":" + a.Port + "/"
+        host += ":" + strconv.Itoa(a.Port) + "/"
         host += serviceName + "/"
 
         if _, err := strconv.Atoi(version); err == nil {
@@ -77,8 +81,8 @@ func init() {
     registryApi := os.Getenv("SOAJS_REGISTRY_API")
     soajsEnv := os.Getenv("SOAJS_ENV")
     if soajsEnv != "" && registryApi != "" {
-        params := map[string]string{"envCode": strings.ToLower(soajsEnv), "serviceName": "todo"} //TODO pass configuration map, extract service name
-        go ExecRegistry(params)
+        params := map[string]string{"envCode": strings.ToLower(soajsEnv), "serviceName": globalConfig["serviceName"]}
+        AutoReload(params)
     }
 }
 
@@ -113,4 +117,9 @@ func SoajsMiddleware(next http.Handler) http.Handler {
 
         next.ServeHTTP(w, r)
     })
+}
+
+func InitMiddleware(config map[string]string) (func(http.Handler) http.Handler) {
+    globalConfig = config
+    return SoajsMiddleware
 }
