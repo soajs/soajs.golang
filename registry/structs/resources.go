@@ -1,6 +1,6 @@
 package structs
 
-type Resources map[string]Resource
+type Resources map[string]map[string]Resource
 
 type Resource struct {
   Id            string          `json:"_id"`

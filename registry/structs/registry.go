@@ -17,7 +17,7 @@ type Registry struct {
 
   ServiceConfig         ServiceConfig               `json:"serviceConfig"`
   Deployer              Deployer                    `json:"deployer"`
-  Custom                CustomRegistry              `json:"custom"`
+  Custom                CustomRegistries            `json:"custom"`
   Resources             Resources                   `json:"resources"`
   Services              Services                    `json:"services"`
   Daemons               Daemons                     `json:daemons`

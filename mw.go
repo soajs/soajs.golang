@@ -77,15 +77,6 @@ func (a Awareness) GetHost(args ...string) string {
     return host
 }
 
-func init() {
-    registryApi := os.Getenv("SOAJS_REGISTRY_API")
-    soajsEnv := os.Getenv("SOAJS_ENV")
-    if soajsEnv != "" && registryApi != "" {
-        params := map[string]string{"envCode": strings.ToLower(soajsEnv), "serviceName": globalConfig["serviceName"]}
-        AutoReload(params)
-    }
-}
-
 func SoajsMiddleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         log.Println("SOAJS Middleware triggered")
@@ -121,5 +112,13 @@ func SoajsMiddleware(next http.Handler) http.Handler {
 
 func InitMiddleware(config map[string]string) (func(http.Handler) http.Handler) {
     globalConfig = config
+
+    registryApi := os.Getenv("SOAJS_REGISTRY_API")
+    soajsEnv := os.Getenv("SOAJS_ENV")
+    if soajsEnv != "" && registryApi != "" {
+        params := map[string]string{"envCode": strings.ToLower(soajsEnv), "serviceName": globalConfig["serviceName"]}
+        AutoReload(params)
+    }
+
     return SoajsMiddleware
 }

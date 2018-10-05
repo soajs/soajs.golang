@@ -129,10 +129,10 @@ func (reg *RegistryObj) GetDeployer() (structs.Deployer, error) {
 /**
  * Get custom registry
  *
- * @return {CustomRegistry}
+ * @return {CustomRegistries}
  */
-func (reg *RegistryObj) GetCustom() (structs.CustomRegistry, error) {
-  var customRegistry structs.CustomRegistry
+func (reg *RegistryObj) GetCustom() (structs.CustomRegistries, error) {
+  var customRegistry structs.CustomRegistries
   if err := DetectEnvRegistry(reg); err != nil {
       return customRegistry, err
   }
@@ -157,11 +157,22 @@ func (reg *RegistryObj) GetResource(resourceName string) (structs.Resource, erro
       return resource, err
   }
 
-  if len(registry_struct[reg.Env].Resources) == 0 || registry_struct[reg.Env].Resources[resourceName].Id == "" {
+  if len(registry_struct[reg.Env].Resources) == 0 {
     return resource, errors.New("Resource not found")
   }
 
-  resource = registry_struct[reg.Env].Resources[resourceName]
+  for _, resourceList := range registry_struct[reg.Env].Resources {
+      for resourceKey, resourceData := range resourceList {
+          if resourceKey == resourceName {
+              resource = resourceData
+          }
+      }
+  }
+
+  if resource == (structs.Resource{}) {
+    return resource, errors.New("Resource not found")
+  }
+
   return resource, nil
 }
 
@@ -280,22 +291,22 @@ func (reg *RegistryObj) Reload() (bool, error) {
  * Call registry api
  *
  */
-func ExecRegistry(param map[string]string) {
+func ExecRegistry(param map[string]string) (RegistryObj, error) {
   registryApi := os.Getenv("SOAJS_REGISTRY_API")
 
   if index := strings.Index(registryApi, ":"); index == -1 {
-    panic("Invalid format for SOAJS_REGISTRY_API [hostname:port]: " + registryApi)
+    return RegistryObj{}, errors.New("Invalid format for SOAJS_REGISTRY_API [hostname:port]: " + registryApi)
   }
 
   registryApiPort := strings.Split(registryApi, ":")[1]
   if _, err := strconv.Atoi(registryApiPort); err != nil {
-    panic("Port must be an integer [" + registryApiPort + "]" )
+    return RegistryObj{}, errors.New("Port must be an integer [" + registryApiPort + "]")
   }
 
   reqUrl := "http://" + registryApi + "/getRegistry?env=" + param["envCode"] + "&serviceName=" + param["serviceName"]
   httpResponse, err := http.Get(reqUrl)
   if(err != nil) {
-    panic(err)
+    return RegistryObj{}, errors.New("Unable to get registry from api gateway")
   }
 
   apiResponse, _ := ioutil.ReadAll(httpResponse.Body)
@@ -315,9 +326,12 @@ func ExecRegistry(param map[string]string) {
 
   regObj.Env = param["envCode"];
   regObj.ServiceName = param["serviceName"];
+
+  return regObj, nil
 }
 
 func AutoReload(param map[string]string) (chan string) {
+    log.Println("auto reloading ...")
     ExecRegistry(param)
     serviceConfig, _ := regObj.GetServiceConfig()
     //TODO assertion on service config content
