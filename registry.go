@@ -32,6 +32,7 @@ var (
 )
 
 var autoReloadChannel = make(chan string)
+const defaultAutoReloadInterval = 3600000
 
 /**
  * Check if the environment registry exists
@@ -331,13 +332,20 @@ func ExecRegistry(param map[string]string) (RegistryObj, error) {
   return regObj, nil
 }
 
+func GetAutoReloadInterval(autoReloadInterval int) int {
+    if autoReloadInterval > 0 {
+        return autoReloadInterval
+    }
+
+    return defaultAutoReloadInterval
+}
+
 func AutoReload(param map[string]string) (chan string) {
     log.Println("auto reloading ...")
     ExecRegistry(param)
     serviceConfig, _ := regObj.GetServiceConfig()
-    //TODO assertion on service config content
 
-    interval := time.Duration(serviceConfig.Awareness.AutoReloadRegistry) * time.Millisecond
+    interval := time.Duration(GetAutoReloadInterval(serviceConfig.Awareness.AutoReloadRegistry)) * time.Millisecond
     ticker := time.NewTicker(interval)
 
     go func() {
@@ -349,7 +357,7 @@ func AutoReload(param map[string]string) (chan string) {
                 go ExecRegistry(param)
 
                 serviceConfig, _ := regObj.GetServiceConfig()
-                interval = time.Duration(serviceConfig.Awareness.AutoReloadRegistry) * time.Millisecond
+                interval = time.Duration(GetAutoReloadInterval(serviceConfig.Awareness.AutoReloadRegistry)) * time.Millisecond
                 ticker = time.NewTicker(interval)
             case msg := <- autoReloadChannel:
                 if msg == "stop" {
@@ -357,7 +365,7 @@ func AutoReload(param map[string]string) (chan string) {
                     return
                 } else if msg == "reset" {
                     serviceConfig, _ := regObj.GetServiceConfig()
-                    interval = time.Duration(serviceConfig.Awareness.AutoReloadRegistry) * time.Millisecond
+                    interval = time.Duration(GetAutoReloadInterval(serviceConfig.Awareness.AutoReloadRegistry)) * time.Millisecond
                     ticker = time.NewTicker(interval)
                 }
 
