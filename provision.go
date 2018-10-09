@@ -68,7 +68,7 @@ type SOAJSData struct {
   Package                   Package                   `json:"package"`
   Device                    string                    `json:"device"`
   Geo                       map[string]string         `json:"geo"`
-  Urac                      Urac                      `json:"urac"`
+  Urac                      Urac                      `json:"urac,omitempty"`
   Awareness                 Awareness                 `json:"awareness"`
   Param                     Param                     `json:"param"`
 }
