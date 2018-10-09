@@ -315,7 +315,8 @@ func ExecRegistry(param map[string]string) (RegistryObj, error) {
   json.Unmarshal(apiResponse, &temp)
 
   if temp.Result != true {
-    panic(temp)
+      log.Println(temp)
+      return regObj, errors.New("Unable to get registry from api")
   }
 
   if len(registry_struct) == 0 {
