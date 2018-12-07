@@ -1,14 +1,15 @@
 package soajsGo
 
 import (
-    "os"
-    "log"
     "context"
-    "reflect"
-    "strings"
-    "strconv"
-    "net/http"
     "encoding/json"
+    "errors"
+    "log"
+    "net/http"
+    "os"
+    "reflect"
+    "strconv"
+    "strings"
 )
 
 type SOAJSObject struct {
@@ -22,15 +23,16 @@ type SOAJSObject struct {
   Reg                       RegistryObj               `json:"reg"`
 }
 
-var globalConfig map[string]string
+type JSON = map[string]interface{}
+var globalConfig JSON
 
-func mapInjectedObject(r *http.Request) SOAJSData {
+func mapInjectedObject(r *http.Request) (SOAJSData, error) {
     soajsHeader := r.Header.Get("soajsinjectobj")
 
     var input, output SOAJSData
     if inputType := reflect.TypeOf(soajsHeader).String(); inputType == "string" {
         if jsonError := json.Unmarshal([]byte(soajsHeader), &input); jsonError != nil {
-            log.Println(jsonError)
+            return SOAJSData{}, errors.New("Unable to parse SOAJS header object")
         }
     }
 
@@ -44,7 +46,7 @@ func mapInjectedObject(r *http.Request) SOAJSData {
     output.Urac = input.Urac
     output.Awareness = input.Awareness
 
-    return output
+    return output, nil
 }
 
 func (a Awareness) GetHost(args ...string) string {
@@ -79,44 +81,46 @@ func (a Awareness) GetHost(args ...string) string {
 
 func SoajsMiddleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        log.Println("SOAJS Middleware triggered")
+        injectObject, err := mapInjectedObject(r)
+        if err != nil {
+            log.Println(err)
+        } else {
+            middlewareOutput := SOAJSObject{}
+            middlewareOutput.Tenant = injectObject.Tenant
 
-        injectObject := mapInjectedObject(r)
+            middlewareOutput.Tenant.Key.IKey = injectObject.Key.IKey
+            middlewareOutput.Tenant.Key.EKey = injectObject.Key.EKey
 
-        middlewareOutput := SOAJSObject{}
-        middlewareOutput.Tenant = injectObject.Tenant
+            middlewareOutput.Tenant.Application = injectObject.Application
+            middlewareOutput.Tenant.Application.Package_acl = injectObject.Package.Acl
+            middlewareOutput.Tenant.Application.Package_acl_all_env = injectObject.Package.Acl_all_env
 
-        middlewareOutput.Tenant.Key.IKey = injectObject.Key.IKey
-        middlewareOutput.Tenant.Key.EKey = injectObject.Key.EKey
+            middlewareOutput.Urac = injectObject.Urac
+            middlewareOutput.ServicesConfig = injectObject.Key.Config
+            middlewareOutput.Device = injectObject.Device
+            middlewareOutput.Geo = injectObject.Geo
+            middlewareOutput.Awareness = injectObject.Awareness
 
-        middlewareOutput.Tenant.Application = injectObject.Application
-        middlewareOutput.Tenant.Application.Package_acl = injectObject.Package.Acl
-        middlewareOutput.Tenant.Application.Package_acl_all_env = injectObject.Package.Acl_all_env
+            if os.Getenv("SOAJS_REGISTRY_API") != "" && os.Getenv("SOAJS_ENV") != "" {
+                middlewareOutput.Reg = regObj
+            }
 
-        middlewareOutput.Urac = injectObject.Urac
-        middlewareOutput.ServicesConfig = injectObject.Key.Config
-        middlewareOutput.Device = injectObject.Device
-        middlewareOutput.Geo = injectObject.Geo
-        middlewareOutput.Awareness = injectObject.Awareness
-
-        if os.Getenv("SOAJS_REGISTRY_API") != "" && os.Getenv("SOAJS_ENV") != "" {
-            middlewareOutput.Reg = regObj
+            soajs := context.WithValue(r.Context(), "soajs", middlewareOutput)
+            r = r.WithContext(soajs)
         }
-
-        soajs := context.WithValue(r.Context(), "soajs", middlewareOutput)
-        r = r.WithContext(soajs)
-
         next.ServeHTTP(w, r)
     })
 }
 
-func InitMiddleware(config map[string]string) (func(http.Handler) http.Handler) {
+func InitMiddleware(config JSON) (func(http.Handler) http.Handler) {
     globalConfig = config
+
+    serviceName := globalConfig["serviceName"].(string)
 
     registryApi := os.Getenv("SOAJS_REGISTRY_API")
     soajsEnv := os.Getenv("SOAJS_ENV")
     if soajsEnv != "" && registryApi != "" {
-        params := map[string]string{"envCode": strings.ToLower(soajsEnv), "serviceName": globalConfig["serviceName"]}
+        params := map[string]string{"envCode": strings.ToLower(soajsEnv), "serviceName": serviceName}
         AutoReload(params)
     }
 
