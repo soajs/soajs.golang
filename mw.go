@@ -137,7 +137,7 @@ func InitMiddleware(config JSON) func(http.Handler) http.Handler {
 			reqUrl := "http://" + registryApi + "/register"
 			globalConfig["ip"] = mwIP
 			globalConfig["type"] = "service"
-			globalConfig["mw"] = "true"
+			globalConfig["mw"] = true
 			globalConfig["group"] = globalConfig["serviceGroup"]
 			globalConfig["name"] = globalConfig["serviceName"]
 			globalConfig["port"] = globalConfig["servicePort"]
