@@ -31,6 +31,9 @@ var globalConfig JSON
 func mapInjectedObject(r *http.Request) (SOAJSData, error) {
 	soajsHeader := r.Header.Get("soajsinjectobj")
 
+	if soajsHeader == "" {
+		return SOAJSData{}, nil
+	}
 	var input, output SOAJSData
 	if inputType := reflect.TypeOf(soajsHeader).String(); inputType == "string" {
 		if jsonError := json.Unmarshal([]byte(soajsHeader), &input); jsonError != nil {
@@ -86,7 +89,7 @@ func SoajsMiddleware(next http.Handler) http.Handler {
 		injectObject, err := mapInjectedObject(r)
 		if err != nil {
 			log.Println(err)
-		} else {
+		} else if !injectObject.IsEmpty() {
 			middlewareOutput := SOAJSObject{}
 			middlewareOutput.Tenant = injectObject.Tenant
 
