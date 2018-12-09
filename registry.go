@@ -307,15 +307,16 @@ func ExecRegistry(param map[string]string) (RegistryObj, error) {
 	httpResponse, err := http.Get(reqUrl)
 	if err != nil {
 		return RegistryObj{}, errors.New("unable to get registry from api gateway")
+	} else {
+		defer httpResponse.Body.Close()
 	}
-
 	apiResponse, _ := ioutil.ReadAll(httpResponse.Body)
 
 	var temp RegistryApiResponse
-	json.Unmarshal(apiResponse, &temp)
+	err = json.Unmarshal(apiResponse, &temp)
 
-	if temp.Result != true {
-		panic(temp)
+	if err != nil || temp.Result != true {
+		return RegistryObj{}, errors.New("unable to convert registry to json from returned api gateway response")
 	}
 
 	if len(registryStruct) == 0 {
