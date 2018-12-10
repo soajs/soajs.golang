@@ -1,49 +1,48 @@
 package soajsGo
 
 import (
-  "os"
-  "log"
-  "time"
-  "errors"
-  "strings"
-  "strconv"
-  "net/http"
-  "io/ioutil"
-  "encoding/json"
+	"encoding/json"
+	"errors"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+	"time"
 
-  "github.com/soajs/soajs.golang/registry/structs"
+	"github.com/soajs/soajs.golang/registry/structs"
 )
 
 type RegistryObj struct {
-  Env                       string                    `json:"env"`
-  ServiceName               string                    `json:"serviceName"`
+	Env         string `json:"env"`
+	ServiceName string `json:"serviceName"`
 }
 
 type RegistryApiResponse struct {
-  Result                    bool                      `json:"result"`
-  Ts                        int64                     `json:"ts"`
-  Service                   map[string]string         `json:"service"`
-  Data                      structs.Registry          `json:"data"`
+	Result  bool              `json:"result"`
+	Ts      int64             `json:"ts"`
+	Service map[string]string `json:"service"`
+	Data    structs.Registry  `json:"data"`
 }
 
 var (
-    registry_struct map[string]structs.Registry
-    regObj RegistryObj
+	registryStruct map[string]structs.Registry
+	regObj         RegistryObj
 )
 
 var autoReloadChannel = make(chan string)
-const defaultAutoReloadInterval = 3600000
 
 /**
  * Check if the environment registry exists
  *
  */
-func DetectEnvRegistry(reg *RegistryObj) (error) {
-    if reg.Env == "" || registry_struct[reg.Env].Environment == "" {
-      return errors.New("Environment registry not found")
-    }
+func DetectEnvRegistry(reg *RegistryObj) error {
+	if reg.Env == "" || registryStruct[reg.Env].Environment == "" {
+		return errors.New("environment registry not found")
+	}
 
-    return nil
+	return nil
 }
 
 /**
@@ -52,25 +51,25 @@ func DetectEnvRegistry(reg *RegistryObj) (error) {
  * @return {Database}
  */
 func (reg *RegistryObj) GetDatabase(dbName string) (structs.Database, error) {
-  var database structs.Database
+	var database structs.Database
 
-  if dbName == "" {
-    return database, errors.New("Database name is required")
-  }
+	if dbName == "" {
+		return database, errors.New("database name is required")
+	}
 
-  if err := DetectEnvRegistry(reg); err != nil {
-      return database, err
-  }
+	if err := DetectEnvRegistry(reg); err != nil {
+		return database, err
+	}
 
-  if len(registry_struct[reg.Env].CoreDBs) > 0 && registry_struct[reg.Env].CoreDBs[dbName].Name != "" {
-      database = registry_struct[reg.Env].CoreDBs[dbName]
-  } else if len(registry_struct[reg.Env].TenantMetaDBs) > 0 && registry_struct[reg.Env].TenantMetaDBs[dbName].Name != "" {
-      database = registry_struct[reg.Env].TenantMetaDBs[dbName]
-  } else {
-      return database, errors.New("Database not found")
-  }
+	if len(registryStruct[reg.Env].CoreDBs) > 0 && registryStruct[reg.Env].CoreDBs[dbName].Name != "" {
+		database = registryStruct[reg.Env].CoreDBs[dbName]
+	} else if len(registryStruct[reg.Env].TenantMetaDBs) > 0 && registryStruct[reg.Env].TenantMetaDBs[dbName].Name != "" {
+		database = registryStruct[reg.Env].TenantMetaDBs[dbName]
+	} else {
+		return database, errors.New("database not found")
+	}
 
-  return database, nil
+	return database, nil
 }
 
 /**
@@ -79,22 +78,22 @@ func (reg *RegistryObj) GetDatabase(dbName string) (structs.Database, error) {
  * @return {Databases}
  */
 func (reg *RegistryObj) GetDatabases() (structs.Databases, error) {
-  var databases structs.Databases
-  if err := DetectEnvRegistry(reg); err != nil {
-      return databases, err
-  }
+	var databases structs.Databases
+	if err := DetectEnvRegistry(reg); err != nil {
+		return databases, err
+	}
 
-  if len(registry_struct[reg.Env].CoreDBs) > 0 {
-    databases = registry_struct[reg.Env].CoreDBs
-  }
+	if len(registryStruct[reg.Env].CoreDBs) > 0 {
+		databases = registryStruct[reg.Env].CoreDBs
+	}
 
-  if len(registry_struct[reg.Env].TenantMetaDBs) > 0 {
-    for dbName, dbConfig := range registry_struct[reg.Env].TenantMetaDBs {
-        databases[dbName] = dbConfig
-    }
-  }
+	if len(registryStruct[reg.Env].TenantMetaDBs) > 0 {
+		for dbName, dbConfig := range registryStruct[reg.Env].TenantMetaDBs {
+			databases[dbName] = dbConfig
+		}
+	}
 
-  return databases, nil
+	return databases, nil
 }
 
 /**
@@ -103,13 +102,13 @@ func (reg *RegistryObj) GetDatabases() (structs.Databases, error) {
  * @return {ServiceConfig}
  */
 func (reg *RegistryObj) GetServiceConfig() (structs.ServiceConfig, error) {
-  var serviceConfig structs.ServiceConfig
-  if err := DetectEnvRegistry(reg); err != nil {
-      return serviceConfig, err
-  }
+	var serviceConfig structs.ServiceConfig
+	if err := DetectEnvRegistry(reg); err != nil {
+		return serviceConfig, err
+	}
 
-  serviceConfig = registry_struct[reg.Env].ServiceConfig
-  return serviceConfig, nil
+	serviceConfig = registryStruct[reg.Env].ServiceConfig
+	return serviceConfig, nil
 }
 
 /**
@@ -118,13 +117,13 @@ func (reg *RegistryObj) GetServiceConfig() (structs.ServiceConfig, error) {
  * @return {Deployer}
  */
 func (reg *RegistryObj) GetDeployer() (structs.Deployer, error) {
-  var deployer structs.Deployer
-  if err := DetectEnvRegistry(reg); err != nil {
-      return deployer, err
-  }
+	var deployer structs.Deployer
+	if err := DetectEnvRegistry(reg); err != nil {
+		return deployer, err
+	}
 
-  deployer = registry_struct[reg.Env].Deployer
-  return deployer, nil
+	deployer = registryStruct[reg.Env].Deployer
+	return deployer, nil
 }
 
 /**
@@ -133,13 +132,13 @@ func (reg *RegistryObj) GetDeployer() (structs.Deployer, error) {
  * @return {CustomRegistries}
  */
 func (reg *RegistryObj) GetCustom() (structs.CustomRegistries, error) {
-  var customRegistry structs.CustomRegistries
-  if err := DetectEnvRegistry(reg); err != nil {
-      return customRegistry, err
-  }
+	var customRegistry structs.CustomRegistries
+	if err := DetectEnvRegistry(reg); err != nil {
+		return customRegistry, err
+	}
 
-  customRegistry = registry_struct[reg.Env].Custom
-  return customRegistry, nil
+	customRegistry = registryStruct[reg.Env].Custom
+	return customRegistry, nil
 }
 
 /**
@@ -148,33 +147,33 @@ func (reg *RegistryObj) GetCustom() (structs.CustomRegistries, error) {
  * @return {Resource}
  */
 func (reg *RegistryObj) GetResource(resourceName string) (structs.Resource, error) {
-  var resource structs.Resource
+	var resource structs.Resource
 
-  if resourceName == "" {
-    return resource, errors.New("Resource name is required")
-  }
+	if resourceName == "" {
+		return resource, errors.New("resource name is required")
+	}
 
-  if err := DetectEnvRegistry(reg); err != nil {
-      return resource, err
-  }
+	if err := DetectEnvRegistry(reg); err != nil {
+		return resource, err
+	}
 
-  if len(registry_struct[reg.Env].Resources) == 0 {
-    return resource, errors.New("Resource not found")
-  }
+	if len(registryStruct[reg.Env].Resources) == 0 {
+		return resource, errors.New("resource not found")
+	}
 
-  for _, resourceList := range registry_struct[reg.Env].Resources {
-      for resourceKey, resourceData := range resourceList {
-          if resourceKey == resourceName {
-              resource = resourceData
-          }
-      }
-  }
+	for _, resourceList := range registryStruct[reg.Env].Resources {
+		for resourceKey, resourceData := range resourceList {
+			if resourceKey == resourceName {
+				resource = resourceData
+			}
+		}
+	}
 
-  if resource == (structs.Resource{}) {
-    return resource, errors.New("Resource not found")
-  }
+	if resource == (structs.Resource{}) {
+		return resource, errors.New("resource not found")
+	}
 
-  return resource, nil
+	return resource, nil
 }
 
 /**
@@ -183,13 +182,13 @@ func (reg *RegistryObj) GetResource(resourceName string) (structs.Resource, erro
  * @return {Resources}
  */
 func (reg *RegistryObj) GetResources() (structs.Resources, error) {
-  var resources structs.Resources
-  if err := DetectEnvRegistry(reg); err != nil {
-      return resources, err
-  }
+	var resources structs.Resources
+	if err := DetectEnvRegistry(reg); err != nil {
+		return resources, err
+	}
 
-  resources = registry_struct[reg.Env].Resources
-  return resources, nil
+	resources = registryStruct[reg.Env].Resources
+	return resources, nil
 }
 
 /**
@@ -198,22 +197,22 @@ func (reg *RegistryObj) GetResources() (structs.Resources, error) {
  * @return {Service}
  */
 func (reg *RegistryObj) GetService(serviceName string) (structs.Service, error) {
-  var service structs.Service
+	var service structs.Service
 
-  if serviceName == "" {
-    return service, errors.New("Service name is required")
-  }
+	if serviceName == "" {
+		return service, errors.New("service name is required")
+	}
 
-  if err := DetectEnvRegistry(reg); err != nil {
-      return service, err
-  }
+	if err := DetectEnvRegistry(reg); err != nil {
+		return service, err
+	}
 
-  if len(registry_struct[reg.Env].Services) == 0 || registry_struct[reg.Env].Services[serviceName].Group == "" {
-    return service, errors.New("Service not found")
-  }
+	if len(registryStruct[reg.Env].Services) == 0 || registryStruct[reg.Env].Services[serviceName].Group == "" {
+		return service, errors.New("service not found")
+	}
 
-  service = registry_struct[reg.Env].Services[serviceName]
-  return service, nil
+	service = registryStruct[reg.Env].Services[serviceName]
+	return service, nil
 }
 
 /**
@@ -222,13 +221,13 @@ func (reg *RegistryObj) GetService(serviceName string) (structs.Service, error) 
  * @return {Services}
  */
 func (reg *RegistryObj) GetServices() (structs.Services, error) {
-  var services structs.Services
-  if err := DetectEnvRegistry(reg); err != nil {
-      return services, err
-  }
+	var services structs.Services
+	if err := DetectEnvRegistry(reg); err != nil {
+		return services, err
+	}
 
-  services = registry_struct[reg.Env].Services
-  return services, nil
+	services = registryStruct[reg.Env].Services
+	return services, nil
 }
 
 /**
@@ -237,22 +236,22 @@ func (reg *RegistryObj) GetServices() (structs.Services, error) {
  * @return {Daemon}
  */
 func (reg *RegistryObj) GetDaemon(daemonName string) (structs.Daemon, error) {
-  var daemon structs.Daemon
+	var daemon structs.Daemon
 
-  if daemonName == "" {
-    return daemon, errors.New("Daemon name is required")
-  }
+	if daemonName == "" {
+		return daemon, errors.New("daemon name is required")
+	}
 
-  if err := DetectEnvRegistry(reg); err != nil {
-      return daemon, err
-  }
+	if err := DetectEnvRegistry(reg); err != nil {
+		return daemon, err
+	}
 
-  if len(registry_struct[reg.Env].Daemons) == 0 || registry_struct[reg.Env].Daemons[daemonName].Group == "" {
-    return daemon, errors.New("Daemon not found")
-  }
+	if len(registryStruct[reg.Env].Daemons) == 0 || registryStruct[reg.Env].Daemons[daemonName].Group == "" {
+		return daemon, errors.New("daemon not found")
+	}
 
-  daemon = registry_struct[reg.Env].Daemons[daemonName]
-  return daemon, nil
+	daemon = registryStruct[reg.Env].Daemons[daemonName]
+	return daemon, nil
 }
 
 /**
@@ -261,13 +260,13 @@ func (reg *RegistryObj) GetDaemon(daemonName string) (structs.Daemon, error) {
  * @return {Daemons}
  */
 func (reg *RegistryObj) GetDaemons() (structs.Daemons, error) {
-  var daemons structs.Daemons
-  if err := DetectEnvRegistry(reg); err != nil {
-      return daemons, err
-  }
+	var daemons structs.Daemons
+	if err := DetectEnvRegistry(reg); err != nil {
+		return daemons, err
+	}
 
-  daemons = registry_struct[reg.Env].Daemons
-  return daemons, nil
+	daemons = registryStruct[reg.Env].Daemons
+	return daemons, nil
 }
 
 /**
@@ -276,16 +275,16 @@ func (reg *RegistryObj) GetDaemons() (structs.Daemons, error) {
  * @return {Boolean}
  */
 func (reg *RegistryObj) Reload() (bool, error) {
-  if reg.Env == "" || reg.ServiceName == "" {
-    return false, errors.New("Cannot reload registry. Env and ServiceName are not set.")
-  }
+	if reg.Env == "" || reg.ServiceName == "" {
+		return false, errors.New("cannot reload registry env and serviceName are not set")
+	}
 
-  param := map[string]string{"envCode": reg.Env, "serviceName": reg.ServiceName}
-  ExecRegistry(param) //TODO check return type of ExecRegistry
+	param := map[string]string{"envCode": reg.Env, "serviceName": reg.ServiceName}
+	ExecRegistry(param) //TODO check return type of ExecRegistry
 
-  autoReloadChannel <- "reset"
+	autoReloadChannel <- "reset"
 
-  return true, nil
+	return true, nil
 }
 
 /**
@@ -293,86 +292,81 @@ func (reg *RegistryObj) Reload() (bool, error) {
  *
  */
 func ExecRegistry(param map[string]string) (RegistryObj, error) {
-  registryApi := os.Getenv("SOAJS_REGISTRY_API")
+	registryApi := os.Getenv("SOAJS_REGISTRY_API")
 
-  if index := strings.Index(registryApi, ":"); index == -1 {
-    return RegistryObj{}, errors.New("Invalid format for SOAJS_REGISTRY_API [hostname:port]: " + registryApi)
-  }
+	if index := strings.Index(registryApi, ":"); index == -1 {
+		return RegistryObj{}, errors.New("Invalid format for SOAJS_REGISTRY_API [hostname:port]: " + registryApi)
+	}
 
-  registryApiPort := strings.Split(registryApi, ":")[1]
-  if _, err := strconv.Atoi(registryApiPort); err != nil {
-    return RegistryObj{}, errors.New("Port must be an integer [" + registryApiPort + "]")
-  }
+	registryApiPort := strings.Split(registryApi, ":")[1]
+	if _, err := strconv.Atoi(registryApiPort); err != nil {
+		return RegistryObj{}, errors.New("Port must be an integer [" + registryApiPort + "]")
+	}
 
-  reqUrl := "http://" + registryApi + "/getRegistry?env=" + param["envCode"] + "&serviceName=" + param["serviceName"]
-  httpResponse, err := http.Get(reqUrl)
-  if(err != nil) {
-    return RegistryObj{}, errors.New("Unable to get registry from api gateway")
-  }
+	reqUrl := "http://" + registryApi + "/getRegistry?env=" + param["envCode"] + "&serviceName=" + param["serviceName"]
+	httpResponse, err := http.Get(reqUrl)
+	if err != nil {
+		return RegistryObj{}, errors.New("unable to get registry from api gateway")
+	} else {
+		defer httpResponse.Body.Close()
+	}
+	apiResponse, _ := ioutil.ReadAll(httpResponse.Body)
 
-  apiResponse, _ := ioutil.ReadAll(httpResponse.Body)
+	var temp RegistryApiResponse
+	err = json.Unmarshal(apiResponse, &temp)
 
-  var temp RegistryApiResponse
-  json.Unmarshal(apiResponse, &temp)
+	if err != nil || temp.Result != true {
+		return RegistryObj{}, errors.New("unable to convert registry to json from returned api gateway response")
+	}
 
-  if temp.Result != true {
-      log.Println(temp)
-      return regObj, errors.New("Unable to get registry from api")
-  }
+	if len(registryStruct) == 0 {
+		registryStruct = make(map[string]structs.Registry)
+	}
 
-  if len(registry_struct) == 0 {
-    registry_struct = make(map[string]structs.Registry)
-  }
+	registryStruct[temp.Data.Environment] = temp.Data
 
-  registry_struct[temp.Data.Environment] = temp.Data
-
-  regObj.Env = param["envCode"];
-  regObj.ServiceName = param["serviceName"];
-
-  return regObj, nil
+	regObj.Env = param["envCode"]
+	regObj.ServiceName = param["serviceName"]
+	return regObj, nil
 }
 
-func GetAutoReloadInterval(autoReloadInterval int) int {
-    if autoReloadInterval > 0 {
-        return autoReloadInterval
-    }
+func AutoReload(param map[string]string) chan string {
+	log.Println("auto reloading ...")
+	regObj, err := ExecRegistry(param)
+	if err != nil {
+		log.Println(err)
+	} else {
+		serviceConfig, _ := regObj.GetServiceConfig()
+		//TODO assertion on service config content
 
-    return defaultAutoReloadInterval
-}
+		interval := time.Duration(serviceConfig.Awareness.AutoReloadRegistry) * time.Millisecond
+		ticker := time.NewTicker(interval)
 
-func AutoReload(param map[string]string) (chan string) {
-    log.Println("auto reloading ...")
-    ExecRegistry(param)
-    serviceConfig, _ := regObj.GetServiceConfig()
+		go func() {
+			for {
 
-    interval := time.Duration(GetAutoReloadInterval(serviceConfig.Awareness.AutoReloadRegistry)) * time.Millisecond
-    ticker := time.NewTicker(interval)
+				select {
+				case <-ticker.C:
+					log.Println("Reloading ...")
+					go ExecRegistry(param)
 
-    go func() {
-        for {
+					serviceConfig, _ := regObj.GetServiceConfig()
+					interval = time.Duration(serviceConfig.Awareness.AutoReloadRegistry) * time.Millisecond
+					ticker = time.NewTicker(interval)
+				case msg := <-autoReloadChannel:
+					if msg == "stop" {
+						ticker.Stop()
+						return
+					} else if msg == "reset" {
+						serviceConfig, _ := regObj.GetServiceConfig()
+						interval = time.Duration(serviceConfig.Awareness.AutoReloadRegistry) * time.Millisecond
+						ticker = time.NewTicker(interval)
+					}
 
-            select {
-            case <- ticker.C:
-                log.Println("Reloading ...")
-                go ExecRegistry(param)
+				}
 
-                serviceConfig, _ := regObj.GetServiceConfig()
-                interval = time.Duration(GetAutoReloadInterval(serviceConfig.Awareness.AutoReloadRegistry)) * time.Millisecond
-                ticker = time.NewTicker(interval)
-            case msg := <- autoReloadChannel:
-                if msg == "stop" {
-                    ticker.Stop()
-                    return
-                } else if msg == "reset" {
-                    serviceConfig, _ := regObj.GetServiceConfig()
-                    interval = time.Duration(GetAutoReloadInterval(serviceConfig.Awareness.AutoReloadRegistry)) * time.Millisecond
-                    ticker = time.NewTicker(interval)
-                }
-
-            }
-
-        }
-    }()
-
-    return autoReloadChannel
+			}
+		}()
+	}
+	return autoReloadChannel
 }
