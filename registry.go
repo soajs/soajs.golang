@@ -315,7 +315,7 @@ func ExecRegistry(param map[string]string) (RegistryObj, error) {
 	var temp RegistryApiResponse
 	err = json.Unmarshal(apiResponse, &temp)
 
-	if err != nil || temp.Result != true {
+	if (err != nil && temp.Result != true) || temp.Result != true {
 		return RegistryObj{}, errors.New("unable to convert registry to json from returned api gateway response")
 	}
 
