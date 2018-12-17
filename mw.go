@@ -84,7 +84,7 @@ func (a Awareness) GetHost(args ...string) string {
 	return host
 }
 
-func SoajsMiddleware(next http.Handler) http.Handler {
+func soajsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		injectObject, err := mapInjectedObject(r)
 		if err != nil {
@@ -126,7 +126,7 @@ func InitMiddleware(config JSON) func(http.Handler) http.Handler {
 	soajsEnv := os.Getenv("SOAJS_ENV")
 	if soajsEnv != "" && registryApi != "" {
 		params := map[string]string{"envCode": strings.ToLower(soajsEnv), "serviceName": serviceName}
-		AutoReload(params)
+		autoReload(params)
 
 		manualDeploy := os.Getenv("SOAJS_DEPLOY_MANUAL")
 		if manualDeploy == "1" {
@@ -156,9 +156,9 @@ func InitMiddleware(config JSON) func(http.Handler) http.Handler {
 		}
 	}
 
-	return SoajsMiddleware
+	return soajsMiddleware
 }
 
-func getRegistry() RegistryObj {
+func GetRegistry() RegistryObj {
 	return regObj
 }

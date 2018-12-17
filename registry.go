@@ -37,7 +37,7 @@ var autoReloadChannel = make(chan string)
  * Check if the environment registry exists
  *
  */
-func DetectEnvRegistry(reg *RegistryObj) error {
+func detectEnvRegistry(reg *RegistryObj) error {
 	if reg.Env == "" || registryStruct[reg.Env].Environment == "" {
 		return errors.New("environment registry not found")
 	}
@@ -57,7 +57,7 @@ func (reg *RegistryObj) GetDatabase(dbName string) (structs.Database, error) {
 		return database, errors.New("database name is required")
 	}
 
-	if err := DetectEnvRegistry(reg); err != nil {
+	if err := detectEnvRegistry(reg); err != nil {
 		return database, err
 	}
 
@@ -79,7 +79,7 @@ func (reg *RegistryObj) GetDatabase(dbName string) (structs.Database, error) {
  */
 func (reg *RegistryObj) GetDatabases() (structs.Databases, error) {
 	var databases structs.Databases
-	if err := DetectEnvRegistry(reg); err != nil {
+	if err := detectEnvRegistry(reg); err != nil {
 		return databases, err
 	}
 
@@ -103,7 +103,7 @@ func (reg *RegistryObj) GetDatabases() (structs.Databases, error) {
  */
 func (reg *RegistryObj) GetServiceConfig() (structs.ServiceConfig, error) {
 	var serviceConfig structs.ServiceConfig
-	if err := DetectEnvRegistry(reg); err != nil {
+	if err := detectEnvRegistry(reg); err != nil {
 		return serviceConfig, err
 	}
 
@@ -118,7 +118,7 @@ func (reg *RegistryObj) GetServiceConfig() (structs.ServiceConfig, error) {
  */
 func (reg *RegistryObj) GetCustom() (structs.CustomRegistries, error) {
 	var customRegistry structs.CustomRegistries
-	if err := DetectEnvRegistry(reg); err != nil {
+	if err := detectEnvRegistry(reg); err != nil {
 		return customRegistry, err
 	}
 
@@ -138,7 +138,7 @@ func (reg *RegistryObj) GetResource(resourceName string) (structs.Resource, erro
 		return resource, errors.New("resource name is required")
 	}
 
-	if err := DetectEnvRegistry(reg); err != nil {
+	if err := detectEnvRegistry(reg); err != nil {
 		return resource, err
 	}
 
@@ -168,7 +168,7 @@ func (reg *RegistryObj) GetResource(resourceName string) (structs.Resource, erro
  */
 func (reg *RegistryObj) GetResources() (structs.Resources, error) {
 	var resources structs.Resources
-	if err := DetectEnvRegistry(reg); err != nil {
+	if err := detectEnvRegistry(reg); err != nil {
 		return resources, err
 	}
 
@@ -188,7 +188,7 @@ func (reg *RegistryObj) GetService(serviceName string) (structs.Service, error) 
 		return service, errors.New("service name is required")
 	}
 
-	if err := DetectEnvRegistry(reg); err != nil {
+	if err := detectEnvRegistry(reg); err != nil {
 		return service, err
 	}
 
@@ -207,7 +207,7 @@ func (reg *RegistryObj) GetService(serviceName string) (structs.Service, error) 
  */
 func (reg *RegistryObj) GetServices() (structs.Services, error) {
 	var services structs.Services
-	if err := DetectEnvRegistry(reg); err != nil {
+	if err := detectEnvRegistry(reg); err != nil {
 		return services, err
 	}
 
@@ -226,7 +226,7 @@ func (reg *RegistryObj) Reload() (bool, error) {
 	}
 
 	param := map[string]string{"envCode": reg.Env, "serviceName": reg.ServiceName}
-	ExecRegistry(param) //TODO check return type of ExecRegistry
+	execRegistry(param) //TODO check return type of execRegistry
 
 	autoReloadChannel <- "reset"
 
@@ -237,7 +237,7 @@ func (reg *RegistryObj) Reload() (bool, error) {
  * Call registry api
  *
  */
-func ExecRegistry(param map[string]string) (RegistryObj, error) {
+func execRegistry(param map[string]string) (RegistryObj, error) {
 	registryApi := os.Getenv("SOAJS_REGISTRY_API")
 
 	if index := strings.Index(registryApi, ":"); index == -1 {
@@ -276,9 +276,9 @@ func ExecRegistry(param map[string]string) (RegistryObj, error) {
 	return regObj, nil
 }
 
-func AutoReload(param map[string]string) chan string {
+func autoReload(param map[string]string) chan string {
 	log.Println("auto reloading ...")
-	regObj, err := ExecRegistry(param)
+	regObj, err := execRegistry(param)
 	if err != nil {
 		log.Println(err)
 	} else {
@@ -294,7 +294,7 @@ func AutoReload(param map[string]string) chan string {
 				select {
 				case <-ticker.C:
 					log.Println("Reloading ...")
-					go ExecRegistry(param)
+					go execRegistry(param)
 
 					serviceConfig, _ := regObj.GetServiceConfig()
 					interval = time.Duration(serviceConfig.Awareness.AutoReloadRegistry) * time.Millisecond
