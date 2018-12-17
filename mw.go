@@ -71,9 +71,9 @@ func (a Awareness) GetHost(args ...string) string {
 	}
 
 	host := a.Host
+	host += ":" + strconv.Itoa(a.Port) + "/"
 
 	if serviceName != "" && strings.ToLower(serviceName) != "controller" {
-		host += ":" + strconv.Itoa(a.Port) + "/"
 		host += serviceName + "/"
 
 		if _, err := strconv.Atoi(version); err == nil {
