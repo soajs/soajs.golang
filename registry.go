@@ -112,21 +112,6 @@ func (reg *RegistryObj) GetServiceConfig() (structs.ServiceConfig, error) {
 }
 
 /**
- * Get depeloyer
- *
- * @return {Deployer}
- */
-func (reg *RegistryObj) GetDeployer() (structs.Deployer, error) {
-	var deployer structs.Deployer
-	if err := DetectEnvRegistry(reg); err != nil {
-		return deployer, err
-	}
-
-	deployer = registryStruct[reg.Env].Deployer
-	return deployer, nil
-}
-
-/**
  * Get custom registry
  *
  * @return {CustomRegistries}
@@ -228,45 +213,6 @@ func (reg *RegistryObj) GetServices() (structs.Services, error) {
 
 	services = registryStruct[reg.Env].Services
 	return services, nil
-}
-
-/**
- * Get one daemon
- * @param  {String}     daemonName
- * @return {Daemon}
- */
-func (reg *RegistryObj) GetDaemon(daemonName string) (structs.Daemon, error) {
-	var daemon structs.Daemon
-
-	if daemonName == "" {
-		return daemon, errors.New("daemon name is required")
-	}
-
-	if err := DetectEnvRegistry(reg); err != nil {
-		return daemon, err
-	}
-
-	if len(registryStruct[reg.Env].Daemons) == 0 || registryStruct[reg.Env].Daemons[daemonName].Group == "" {
-		return daemon, errors.New("daemon not found")
-	}
-
-	daemon = registryStruct[reg.Env].Daemons[daemonName]
-	return daemon, nil
-}
-
-/**
- * Get all daemons
- *
- * @return {Daemons}
- */
-func (reg *RegistryObj) GetDaemons() (structs.Daemons, error) {
-	var daemons structs.Daemons
-	if err := DetectEnvRegistry(reg); err != nil {
-		return daemons, err
-	}
-
-	daemons = registryStruct[reg.Env].Daemons
-	return daemons, nil
 }
 
 /**
