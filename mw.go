@@ -126,7 +126,7 @@ func InitMiddleware(config JSON) func(http.Handler) http.Handler {
 	soajsEnv := os.Getenv("SOAJS_ENV")
 	if soajsEnv != "" && registryApi != "" {
 		params := map[string]string{"envCode": strings.ToLower(soajsEnv), "serviceName": serviceName}
-		AutoReload(params)
+		autoReload(params)
 
 		manualDeploy := os.Getenv("SOAJS_DEPLOY_MANUAL")
 		if manualDeploy == "1" {
@@ -157,4 +157,8 @@ func InitMiddleware(config JSON) func(http.Handler) http.Handler {
 	}
 
 	return SoajsMiddleware
+}
+
+func GetRegistry() RegistryObj {
+	return regObj
 }

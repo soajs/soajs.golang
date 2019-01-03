@@ -37,7 +37,7 @@ var autoReloadChannel = make(chan string)
  * Check if the environment registry exists
  *
  */
-func DetectEnvRegistry(reg *RegistryObj) error {
+func detectEnvRegistry(reg *RegistryObj) error {
 	if reg.Env == "" || registryStruct[reg.Env].Environment == "" {
 		return errors.New("environment registry not found")
 	}
@@ -57,7 +57,7 @@ func (reg *RegistryObj) GetDatabase(dbName string) (structs.Database, error) {
 		return database, errors.New("database name is required")
 	}
 
-	if err := DetectEnvRegistry(reg); err != nil {
+	if err := detectEnvRegistry(reg); err != nil {
 		return database, err
 	}
 
@@ -79,7 +79,7 @@ func (reg *RegistryObj) GetDatabase(dbName string) (structs.Database, error) {
  */
 func (reg *RegistryObj) GetDatabases() (structs.Databases, error) {
 	var databases structs.Databases
-	if err := DetectEnvRegistry(reg); err != nil {
+	if err := detectEnvRegistry(reg); err != nil {
 		return databases, err
 	}
 
@@ -103,27 +103,12 @@ func (reg *RegistryObj) GetDatabases() (structs.Databases, error) {
  */
 func (reg *RegistryObj) GetServiceConfig() (structs.ServiceConfig, error) {
 	var serviceConfig structs.ServiceConfig
-	if err := DetectEnvRegistry(reg); err != nil {
+	if err := detectEnvRegistry(reg); err != nil {
 		return serviceConfig, err
 	}
 
 	serviceConfig = registryStruct[reg.Env].ServiceConfig
 	return serviceConfig, nil
-}
-
-/**
- * Get depeloyer
- *
- * @return {Deployer}
- */
-func (reg *RegistryObj) GetDeployer() (structs.Deployer, error) {
-	var deployer structs.Deployer
-	if err := DetectEnvRegistry(reg); err != nil {
-		return deployer, err
-	}
-
-	deployer = registryStruct[reg.Env].Deployer
-	return deployer, nil
 }
 
 /**
@@ -133,7 +118,7 @@ func (reg *RegistryObj) GetDeployer() (structs.Deployer, error) {
  */
 func (reg *RegistryObj) GetCustom() (structs.CustomRegistries, error) {
 	var customRegistry structs.CustomRegistries
-	if err := DetectEnvRegistry(reg); err != nil {
+	if err := detectEnvRegistry(reg); err != nil {
 		return customRegistry, err
 	}
 
@@ -153,7 +138,7 @@ func (reg *RegistryObj) GetResource(resourceName string) (structs.Resource, erro
 		return resource, errors.New("resource name is required")
 	}
 
-	if err := DetectEnvRegistry(reg); err != nil {
+	if err := detectEnvRegistry(reg); err != nil {
 		return resource, err
 	}
 
@@ -183,7 +168,7 @@ func (reg *RegistryObj) GetResource(resourceName string) (structs.Resource, erro
  */
 func (reg *RegistryObj) GetResources() (structs.Resources, error) {
 	var resources structs.Resources
-	if err := DetectEnvRegistry(reg); err != nil {
+	if err := detectEnvRegistry(reg); err != nil {
 		return resources, err
 	}
 
@@ -203,7 +188,7 @@ func (reg *RegistryObj) GetService(serviceName string) (structs.Service, error) 
 		return service, errors.New("service name is required")
 	}
 
-	if err := DetectEnvRegistry(reg); err != nil {
+	if err := detectEnvRegistry(reg); err != nil {
 		return service, err
 	}
 
@@ -222,51 +207,12 @@ func (reg *RegistryObj) GetService(serviceName string) (structs.Service, error) 
  */
 func (reg *RegistryObj) GetServices() (structs.Services, error) {
 	var services structs.Services
-	if err := DetectEnvRegistry(reg); err != nil {
+	if err := detectEnvRegistry(reg); err != nil {
 		return services, err
 	}
 
 	services = registryStruct[reg.Env].Services
 	return services, nil
-}
-
-/**
- * Get one daemon
- * @param  {String}     daemonName
- * @return {Daemon}
- */
-func (reg *RegistryObj) GetDaemon(daemonName string) (structs.Daemon, error) {
-	var daemon structs.Daemon
-
-	if daemonName == "" {
-		return daemon, errors.New("daemon name is required")
-	}
-
-	if err := DetectEnvRegistry(reg); err != nil {
-		return daemon, err
-	}
-
-	if len(registryStruct[reg.Env].Daemons) == 0 || registryStruct[reg.Env].Daemons[daemonName].Group == "" {
-		return daemon, errors.New("daemon not found")
-	}
-
-	daemon = registryStruct[reg.Env].Daemons[daemonName]
-	return daemon, nil
-}
-
-/**
- * Get all daemons
- *
- * @return {Daemons}
- */
-func (reg *RegistryObj) GetDaemons() (structs.Daemons, error) {
-	var daemons structs.Daemons
-	if err := DetectEnvRegistry(reg); err != nil {
-		return daemons, err
-	}
-
-	daemons = registryStruct[reg.Env].Daemons
-	return daemons, nil
 }
 
 /**
@@ -280,7 +226,7 @@ func (reg *RegistryObj) Reload() (bool, error) {
 	}
 
 	param := map[string]string{"envCode": reg.Env, "serviceName": reg.ServiceName}
-	ExecRegistry(param) //TODO check return type of ExecRegistry
+	ExecRegistry(param) //TODO check return type of execRegistry
 
 	autoReloadChannel <- "reset"
 
@@ -330,7 +276,7 @@ func ExecRegistry(param map[string]string) (RegistryObj, error) {
 	return regObj, nil
 }
 
-func AutoReload(param map[string]string) chan string {
+func autoReload(param map[string]string) chan string {
 	log.Println("auto reloading ...")
 	regObj, err := ExecRegistry(param)
 	if err != nil {
