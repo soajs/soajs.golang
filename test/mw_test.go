@@ -22,7 +22,7 @@ var registryOutputByte = []byte(`{"result":true,"ts":1538662943210,"service":{"s
 
 const (
 	registryApi     = "127.0.0.1"
-	registryApiPort = "5000"
+	registryApiPort = "15000"
 	envCode         = "dev"
 )
 
@@ -98,7 +98,7 @@ func GetTestHandler(t *testing.T) http.HandlerFunc {
 		assert.Equal(t, soajs.Awareness.Port, 4000)
 
 		_, err := soajs.Reg.GetDatabases()
-		assert.Equal(t, errors.New("Environment registry not found"), err)
+		assert.Equal(t, errors.New("environment registry not found"), err)
 	}
 	return http.HandlerFunc(fn)
 }
@@ -119,7 +119,7 @@ func GetDatabaseOpsHandler(t *testing.T) http.HandlerFunc {
 
 		// missing database name in param
 		_, err = soajs.Reg.GetDatabase("")
-		assert.Equal(t, errors.New("Database name is required"), err)
+		assert.Equal(t, errors.New("database name is required"), err)
 
 		// get one database
 		oneDb, err := soajs.Reg.GetDatabase("provision")
@@ -179,7 +179,7 @@ func GetResourcesOpsHandler(t *testing.T) http.HandlerFunc {
 
 		// missing resource name in param
 		_, err = soajs.Reg.GetResource("")
-		assert.Equal(t, errors.New("Resource name is required"), err)
+		assert.Equal(t, errors.New("resource name is required"), err)
 
 		// get one resource
 		oneResource, err := soajs.Reg.GetResource("dash_cluster")
@@ -205,7 +205,7 @@ func GetServicesOpsHandler(t *testing.T) http.HandlerFunc {
 
 		// missing service name in param
 		_, err = soajs.Reg.GetService("")
-		assert.Equal(t, errors.New("Service name is required"), err)
+		assert.Equal(t, errors.New("service name is required"), err)
 
 		// get one service
 		oneService, err := soajs.Reg.GetService("example01")
