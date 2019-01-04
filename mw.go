@@ -84,7 +84,7 @@ func (a Awareness) GetHost(args ...string) string {
 	return host
 }
 
-func soajsMiddleware(next http.Handler) http.Handler {
+func SoajsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		injectObject, err := mapInjectedObject(r)
 		if err != nil {
@@ -156,11 +156,7 @@ func InitMiddleware(config JSON) func(http.Handler) http.Handler {
 		}
 	}
 
-	return soajsMiddleware
-}
-
-func GetRegistry() RegistryObj {
-	return regObj
+	return SoajsMiddleware
 }
 
 func GetRegistry() RegistryObj {
