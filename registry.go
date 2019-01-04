@@ -226,7 +226,7 @@ func (reg *RegistryObj) Reload() (bool, error) {
 	}
 
 	param := map[string]string{"envCode": reg.Env, "serviceName": reg.ServiceName}
-	execRegistry(param) //TODO check return type of execRegistry
+	ExecRegistry(param) //TODO check return type of execRegistry
 
 	autoReloadChannel <- "reset"
 
@@ -237,7 +237,7 @@ func (reg *RegistryObj) Reload() (bool, error) {
  * Call registry api
  *
  */
-func execRegistry(param map[string]string) (RegistryObj, error) {
+func ExecRegistry(param map[string]string) (RegistryObj, error) {
 	registryApi := os.Getenv("SOAJS_REGISTRY_API")
 
 	if index := strings.Index(registryApi, ":"); index == -1 {
@@ -278,7 +278,7 @@ func execRegistry(param map[string]string) (RegistryObj, error) {
 
 func autoReload(param map[string]string) chan string {
 	log.Println("auto reloading ...")
-	regObj, err := execRegistry(param)
+	regObj, err := ExecRegistry(param)
 	if err != nil {
 		log.Println(err)
 	} else {
@@ -294,7 +294,7 @@ func autoReload(param map[string]string) chan string {
 				select {
 				case <-ticker.C:
 					log.Println("Reloading ...")
-					go execRegistry(param)
+					go ExecRegistry(param)
 
 					serviceConfig, _ := regObj.GetServiceConfig()
 					interval = time.Duration(serviceConfig.Awareness.AutoReloadRegistry) * time.Millisecond

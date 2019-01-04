@@ -162,3 +162,7 @@ func InitMiddleware(config JSON) func(http.Handler) http.Handler {
 func GetRegistry() RegistryObj {
 	return regObj
 }
+
+func GetRegistry() RegistryObj {
+	return regObj
+}
