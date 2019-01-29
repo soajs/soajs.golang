@@ -1,0 +1,32 @@
+sudo: false
+
+language: go
+
+env:
+  matrix:
+  - GO111MODULE=on
+
+os:
+- linux
+
+go:
+- 1.11.4
+
+git:
+  depth: 1
+
+install: false
+
+notifications:
+  email: false
+
+before_script:
+  - go get
+  - go get golang.org/x/tools/cmd/cover
+  - go get github.com/mattn/goveralls
+  - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s v1.12.5
+
+script:
+  - ./bin/golangci-lint run --config .golangci.yml
+  - go test -v -covermode=count -coverprofile=coverage.out ./...
+  - "$HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-pro"

@@ -13,7 +13,7 @@ type Database struct {
     URLParam                interface{}             `json:"URLParam"`
     ExtraParam              interface{}             `json:"extraParam"`
 
-    //NOTE session specific entries
+    // NOTE: session specific entries
     Store                   interface{}             `json:"store,omitempty"`
     Collection              string                  `json:"collection,omitempty"`
     Stringify               bool                    `json:"stringify,omitempty"`
