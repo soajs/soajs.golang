@@ -61,11 +61,14 @@ func (reg *RegistryObj) GetDatabase(dbName string) (structs.Database, error) {
 		return database, err
 	}
 
-	if len(registryStruct[reg.Env].CoreDBs) > 0 && registryStruct[reg.Env].CoreDBs[dbName].Name != "" {
+	switch {
+	case len(registryStruct[reg.Env].CoreDBs) > 0 && registryStruct[reg.Env].CoreDBs[dbName].Name != "":
 		database = registryStruct[reg.Env].CoreDBs[dbName]
-	} else if len(registryStruct[reg.Env].TenantMetaDBs) > 0 && registryStruct[reg.Env].TenantMetaDBs[dbName].Name != "" {
+		break
+	case len(registryStruct[reg.Env].TenantMetaDBs) > 0 && registryStruct[reg.Env].TenantMetaDBs[dbName].Name != "":
 		database = registryStruct[reg.Env].TenantMetaDBs[dbName]
-	} else {
+		break
+	default:
 		return database, errors.New("database not found")
 	}
 
@@ -226,7 +229,7 @@ func (reg *RegistryObj) Reload() (bool, error) {
 	}
 
 	param := map[string]string{"envCode": reg.Env, "serviceName": reg.ServiceName}
-	ExecRegistry(param) //TODO check return type of execRegistry
+	ExecRegistry(param) // TODO: check return type of execRegistry
 
 	autoReloadChannel <- "reset"
 
@@ -261,7 +264,7 @@ func ExecRegistry(param map[string]string) (RegistryObj, error) {
 	var temp RegistryApiResponse
 	err = json.Unmarshal(apiResponse, &temp)
 
-	if (err != nil && temp.Result != true) || temp.Result != true {
+	if (err != nil && !temp.Result) || !temp.Result {
 		return RegistryObj{}, errors.New("unable to convert registry to json from returned api gateway response")
 	}
 
@@ -283,7 +286,7 @@ func autoReload(param map[string]string) chan string {
 		log.Println(err)
 	} else {
 		serviceConfig, _ := regObj.GetServiceConfig()
-		//TODO assertion on service config content
+		// TODO: assertion on service config content
 
 		interval := time.Duration(serviceConfig.Awareness.AutoReloadRegistry) * time.Millisecond
 		ticker := time.NewTicker(interval)

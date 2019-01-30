@@ -7,7 +7,7 @@ type Tenant struct {
 	Code        string      `json:"code"`
 	Locked      bool        `json:"locked"`
 	Key         Key         `json:"key"`
-	Roaming     interface{} `json:"roaming,omitempty"` //TODO implement struct
+	Roaming     interface{} `json:"roaming,omitempty"` // TODO: implement struct
 	Application Application `json:"application,omitempty"`
 }
 

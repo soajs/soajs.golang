@@ -8,7 +8,7 @@ type Service struct {
 	RequestTimeout        int    `json:"requestTimeout"`
 	RequestTimeoutRenewal int    `json:"requestTimeoutRenewal"`
 	MaxPoolSize           int    `json:"maxPoolSize"`
-	Authorization         bool   `json:"authorization"`
 	Version               int    `json:"version"`
+	Authorization         bool   `json:"authorization"`
 	ExtKeyRequired        bool   `json:"extKeyRequired"`
 }

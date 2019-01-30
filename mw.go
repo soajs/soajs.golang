@@ -57,14 +57,14 @@ func mapInjectedObject(r *http.Request) (SOAJSData, error) {
 func (a Awareness) GetHost(args ...string) string {
 	var serviceName, version string
 	switch len(args) {
-	//controller
+	// controller
 	case 1:
 		serviceName = args[0]
-		//controller, 1
+		// controller, 1
 	case 2:
 		serviceName = args[0]
 		version = args[1]
-		//controller, 1, dash [dash is ignored]
+		// controller, 1, dash [dash is ignored]
 	case 3:
 		serviceName = args[0]
 		version = args[1]
@@ -73,7 +73,7 @@ func (a Awareness) GetHost(args ...string) string {
 	host := a.Host
 	host += ":" + strconv.Itoa(a.Port) + "/"
 
-	if serviceName != "" && strings.ToLower(serviceName) != "controller" {
+	if serviceName != "" && strings.EqualFold(serviceName, "controller") {
 		host += serviceName + "/"
 
 		if _, err := strconv.Atoi(version); err == nil {
@@ -122,9 +122,9 @@ func InitMiddleware(config JSON) func(http.Handler) http.Handler {
 
 	serviceName := globalConfig["serviceName"].(string)
 
-	registryApi := os.Getenv("SOAJS_REGISTRY_API")
+	registryAPI := os.Getenv("SOAJS_REGISTRY_API")
 	soajsEnv := os.Getenv("SOAJS_ENV")
-	if soajsEnv != "" && registryApi != "" {
+	if soajsEnv != "" && registryAPI != "" {
 		params := map[string]string{"envCode": strings.ToLower(soajsEnv), "serviceName": serviceName}
 		autoReload(params)
 
@@ -134,7 +134,7 @@ func InitMiddleware(config JSON) func(http.Handler) http.Handler {
 			if globalConfig["IP"] != nil {
 				mwIP = globalConfig["IP"].(string)
 			}
-			reqUrl := "http://" + registryApi + "/register"
+			reqURL := "http://" + registryAPI + "/register"
 			globalConfig["ip"] = mwIP
 			globalConfig["type"] = "service"
 			globalConfig["mw"] = true
@@ -146,7 +146,7 @@ func InitMiddleware(config JSON) func(http.Handler) http.Handler {
 			if err != nil {
 				log.Fatalln(err)
 			}
-			httpResponse, err := http.Post(reqUrl, "application/json", bytes.NewBuffer(bytesRepresentation))
+			httpResponse, err := http.Post(reqURL, "application/json", bytes.NewBuffer(bytesRepresentation))
 			if err != nil {
 				log.Println("unable to get registry host @ gateway")
 				log.Println(err)
