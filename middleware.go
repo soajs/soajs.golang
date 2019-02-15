@@ -2,9 +2,12 @@ package soajsgo
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -23,14 +26,6 @@ const (
 
 	EnvRegistryAPIAddress = "SOAJS_REGISTRY_API"
 )
-
-// SoajsMiddleware the middleware that gets triggered per request
-func SoajsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		next.ServeHTTP(w, r)
-	})
-}
 
 // InitMiddleware returns http soajs middleware.
 func InitMiddleware(config SOA) func(http.Handler) http.Handler {
@@ -89,4 +84,80 @@ func InitMiddleware(config SOA) func(http.Handler) http.Handler {
 		}
 	}
 	return SoajsMiddleware
+}
+
+// SoajsMiddleware the middleware that gets triggered per request
+func SoajsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		d, err := headerData(r)
+		if err != nil {
+			log.Println(err)
+			next.ServeHTTP(w, r)
+			return
+		}
+		if d == nil {
+			next.ServeHTTP(w, r)
+			return
+		}
+		out := ContextData{
+			Tenant:         d.Tenant,
+			Urac:           d.Urac,
+			ServicesConfig: d.Key.Config,
+			Device:         d.Device,
+			Geo:            d.Geo,
+			Awareness:      d.Awareness,
+			//Reg:            reg,
+		}
+		out.Tenant.Key.IKey = d.Key.IKey
+		out.Tenant.Key.EKey = d.Key.EKey
+
+		out.Tenant.Application = d.Application
+		out.Tenant.Application.PackageACL = d.Package.ACL
+		out.Tenant.Application.PackageACLAllEnv = d.Package.ACLAllEnv
+
+		soajs := context.WithValue(r.Context(), "soajs", out)
+		next.ServeHTTP(w, r.WithContext(soajs))
+	})
+}
+
+func headerData(r *http.Request) (*HeaderInfo, error) {
+	headerData := r.Header.Get(headerDataName)
+	if headerData == "" {
+		return nil, nil
+	}
+	d := new(HeaderInfo)
+	if err := json.Unmarshal([]byte(headerData), d); err != nil {
+		return nil, errors.New("unable to parse SOAJS header")
+	}
+	return d, nil
+}
+
+func (a Host) GetHost(args ...string) string {
+	var serviceName, version string
+	switch len(args) {
+	//controller
+	case 1:
+		serviceName = args[0]
+		//controller, 1
+	case 2:
+		serviceName = args[0]
+		version = args[1]
+		//controller, 1, dash [dash is ignored]
+	case 3:
+		serviceName = args[0]
+		version = args[1]
+	}
+
+	host := a.Host
+	host += ":" + strconv.Itoa(a.Port) + "/"
+
+	if serviceName != "" && strings.ToLower(serviceName) != "controller" {
+		host += serviceName + "/"
+
+		if _, err := strconv.Atoi(version); err == nil {
+			host += "v" + version + "/"
+		}
+	}
+
+	return host
 }
