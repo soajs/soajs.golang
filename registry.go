@@ -1,8 +1,10 @@
-package soajsGo
+package soajsgo
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -10,312 +12,167 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/soajs/soajs.golang/registry/structs"
 )
 
-type RegistryObj struct {
-	Env         string `json:"env"`
-	ServiceName string `json:"serviceName"`
-}
+const (
+	// EnvProfile is the environment variable name that contains location of the profile
+	// to use so that SOAJS can connect to the core database.
+	EnvProfile = "SOAJS_PROFILE"
 
-type RegistryApiResponse struct {
-	Result  bool              `json:"result"`
-	Ts      int64             `json:"ts"`
-	Service map[string]string `json:"service"`
-	Data    structs.Registry  `json:"data"`
-}
+	// EnvSRVIP is optional environment variable used to specify which IP address to use
+	// if the machine has more than one active interface.
+	EnvSRVIP = "SOAJS_SRVIP"
 
-var (
-	registryStruct map[string]structs.Registry
-	regObj         RegistryObj
+	// EnvSOLO is optional environment variable used to launch any service on top of SOAJS
+	// without the need of a database.
+	EnvSOLO = "SOAJS_SOLO"
+
+	// EnvSrvAutoRegisterHost is optional environment variable used in case a service should register itself or not.
+	EnvSrvAutoRegisterHost = "SOAJS_SRV_AUTOREGISTERHOST"
+
+	// EnvDaemonGRPConf is the environment variable name that contains the name of the daemon group to use;
+	// available for daemons ONLY.
+	EnvDaemonGRPConf = "SOAJS_DAEMON_GRP_CONF"
+
+	// EnvGCName is the environment variable name that contains mandatory variable if deploying a GCS service
+	// and contains the name of that GCS service.
+	EnvGCName = "SOAJS_GC_NAME"
+
+	// EnvDCVersion is the environment variable name that contains mandatory variable if deploying a GCS service
+	// and contains the version of that GCS service.
+	EnvDCVersion = "SOAJS_GC_VERSION"
+
+	// EnvGCMaxUploadLimit is optional variable if deploying a GCS service that specifies the maximum upload limit
+	// of file sizes to accept.
+	EnvGCMaxUploadLimit = "SOAJS_GC_MAX_UPLOAD_LIMIT"
+
+	// EnvRegistryAPIAddress is the environment variable name that contains the IP address and port of
+	// the controller service that runs in the same environment. The SOAJS middleware uses this variable to fetch
+	// the registry of this environment and supply it to your service.
+	EnvRegistryAPIAddress = "SOAJS_REGISTRY_API"
 )
 
-var autoReloadChannel = make(chan string)
-
-/**
- * Check if the environment registry exists
- *
- */
-func detectEnvRegistry(reg *RegistryObj) error {
-	if reg.Env == "" || registryStruct[reg.Env].Environment == "" {
-		return errors.New("environment registry not found")
+// NewRegistry creates and initialises new registry by service name and code.
+// see: https://soajsorg.atlassian.net/wiki/spaces/SOAJ/pages/61347270/Service
+// nolint: errcheck
+func NewRegistry(serviceName, envCode string) (*Registry, error) {
+	if serviceName == "" || envCode == "" {
+		return nil, errors.New("service name and env code are required")
+	}
+	addr := os.Getenv(EnvRegistryAPIAddress)
+	if addr == "" {
+		return nil, fmt.Errorf("could not find environment variable %s", EnvRegistryAPIAddress)
+	}
+	if index := strings.Index(addr, ":"); index == -1 {
+		return nil, fmt.Errorf("invalid format for %s. Got [%s], expected [hostname:port]: ", EnvRegistryAPIAddress, addr)
+	}
+	port := strings.Split(addr, ":")[1]
+	if _, err := strconv.Atoi(port); err != nil {
+		return nil, fmt.Errorf("port must be an integer, got %s", port)
 	}
 
+	reqURL := fmt.Sprintf("http://%s/getRegistry?env=%s&serviceName=%s", addr, envCode, serviceName)
+	res, err := http.Get(reqURL)
+	if err != nil {
+		return nil, fmt.Errorf("could not get registry from api gateway: %v", err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode < 200 || res.StatusCode > 299 {
+		b, _ := ioutil.ReadAll(res.Body)
+		return nil, fmt.Errorf("non 2xx status code: %d %v", res.StatusCode, b)
+	}
+	var temp RegistryAPIResponse
+	err = json.NewDecoder(res.Body).Decode(&temp)
+	if err != nil {
+		return nil, fmt.Errorf("unable to convert registry response: %v", err)
+	}
+	if len(temp.Errors.Details) > 0 {
+		return nil, fmt.Errorf("bad response: [%d] %s", temp.Errors.Details[0].Code, temp.Errors.Details[0].Message)
+	}
+	return &temp.Registry, nil
+}
+
+// Reload does the same that NewRegistry does, It reloads registry from soajs.
+func (reg *Registry) Reload() error {
+	r, err := NewRegistry(reg.Name, reg.Environment)
+	if err != nil {
+		return err
+	}
+	// TODO: potential concurrency problems here.
+	*reg = *r
 	return nil
 }
 
-/**
- * Get one database
- * @param  {String}     dbName
- * @return {Database}
- */
-func (reg *RegistryObj) GetDatabase(dbName string) (structs.Database, error) {
-	var database structs.Database
+// You can run this method in go routine.
+func (reg *Registry) autoReload(ctx context.Context) {
+	ticker := time.NewTicker(reg.ServiceConfig.Awareness.AutoReloadRegistry * time.Millisecond)
+	for {
+		select {
+		case <-ticker.C:
+			err := reg.Reload()
+			if err != nil {
+				// TODO: it is not correct to print some logs in library.
+				log.Printf("could not reload registry data: %v", err)
+			} else {
+				ticker = time.NewTicker(reg.ServiceConfig.Awareness.AutoReloadRegistry * time.Millisecond)
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
+}
 
+// Database returns one database by name.
+func (reg Registry) Database(dbName string) (*Database, error) {
 	if dbName == "" {
-		return database, errors.New("database name is required")
+		return nil, errors.New("database name is required")
 	}
-
-	if err := detectEnvRegistry(reg); err != nil {
-		return database, err
+	if db, ok := reg.CoreDBs[dbName]; ok {
+		return &db, nil
 	}
-
-	switch {
-	case len(registryStruct[reg.Env].CoreDBs) > 0 && registryStruct[reg.Env].CoreDBs[dbName].Name != "":
-		database = registryStruct[reg.Env].CoreDBs[dbName]
-		break
-	case len(registryStruct[reg.Env].TenantMetaDBs) > 0 && registryStruct[reg.Env].TenantMetaDBs[dbName].Name != "":
-		database = registryStruct[reg.Env].TenantMetaDBs[dbName]
-		break
-	default:
-		return database, errors.New("database not found")
+	if db, ok := reg.TenantMetaDBs[dbName]; ok {
+		return &db, nil
 	}
-
-	return database, nil
+	return nil, errors.New("could not found database")
 }
 
-/**
- * Get all databases
- *
- * @return {Databases}
- */
-func (reg *RegistryObj) GetDatabases() (structs.Databases, error) {
-	var databases structs.Databases
-	if err := detectEnvRegistry(reg); err != nil {
-		return databases, err
+// Databases returns all databases.
+func (reg Registry) Databases() (map[string]Database, error) {
+	dbs := make(map[string]Database, len(reg.CoreDBs)+len(reg.TenantMetaDBs))
+	for dbName := range reg.CoreDBs {
+		dbs[dbName] = reg.CoreDBs[dbName]
 	}
-
-	if len(registryStruct[reg.Env].CoreDBs) > 0 {
-		databases = registryStruct[reg.Env].CoreDBs
+	for dbName := range reg.TenantMetaDBs {
+		dbs[dbName] = reg.TenantMetaDBs[dbName]
 	}
-
-	if len(registryStruct[reg.Env].TenantMetaDBs) > 0 {
-		for dbName, dbConfig := range registryStruct[reg.Env].TenantMetaDBs {
-			databases[dbName] = dbConfig
-		}
+	if len(dbs) > 0 {
+		return dbs, nil
 	}
-
-	return databases, nil
+	return nil, errors.New("could not found databases")
 }
 
-/**
- * Get service config
- *
- * @return {ServiceConfig}
- */
-func (reg *RegistryObj) GetServiceConfig() (structs.ServiceConfig, error) {
-	var serviceConfig structs.ServiceConfig
-	if err := detectEnvRegistry(reg); err != nil {
-		return serviceConfig, err
+// Resource returns one resource.
+func (reg Registry) Resource(name string) (*Resource, error) {
+	if name == "" {
+		return nil, errors.New("resource name is required")
 	}
-
-	serviceConfig = registryStruct[reg.Env].ServiceConfig
-	return serviceConfig, nil
-}
-
-/**
- * Get custom registry
- *
- * @return {CustomRegistries}
- */
-func (reg *RegistryObj) GetCustom() (structs.CustomRegistries, error) {
-	var customRegistry structs.CustomRegistries
-	if err := detectEnvRegistry(reg); err != nil {
-		return customRegistry, err
-	}
-
-	customRegistry = registryStruct[reg.Env].Custom
-	return customRegistry, nil
-}
-
-/**
- * Get one resource
- * @param  {String}     resourceName
- * @return {Resource}
- */
-func (reg *RegistryObj) GetResource(resourceName string) (structs.Resource, error) {
-	var resource structs.Resource
-
-	if resourceName == "" {
-		return resource, errors.New("resource name is required")
-	}
-
-	if err := detectEnvRegistry(reg); err != nil {
-		return resource, err
-	}
-
-	if len(registryStruct[reg.Env].Resources) == 0 {
-		return resource, errors.New("resource not found")
-	}
-
-	for _, resourceList := range registryStruct[reg.Env].Resources {
+	for _, resourceList := range reg.Resources {
 		for resourceKey, resourceData := range resourceList {
-			if resourceKey == resourceName {
-				resource = resourceData
+			if resourceKey == name {
+				return &resourceData, nil
 			}
 		}
 	}
-
-	if resource == (structs.Resource{}) {
-		return resource, errors.New("resource not found")
-	}
-
-	return resource, nil
+	return nil, errors.New("resource not found")
 }
 
-/**
- * Get all resources
- *
- * @return {Resources}
- */
-func (reg *RegistryObj) GetResources() (structs.Resources, error) {
-	var resources structs.Resources
-	if err := detectEnvRegistry(reg); err != nil {
-		return resources, err
+// Service returns one service by name.
+func (reg Registry) Service(name string) (*Service, error) {
+	if name == "" {
+		return nil, errors.New("service name is required")
 	}
-
-	resources = registryStruct[reg.Env].Resources
-	return resources, nil
-}
-
-/**
- * Get one service
- * @param  {String}     serviceName
- * @return {Service}
- */
-func (reg *RegistryObj) GetService(serviceName string) (structs.Service, error) {
-	var service structs.Service
-
-	if serviceName == "" {
-		return service, errors.New("service name is required")
+	if s, ok := reg.Services[name]; ok {
+		return &s, nil
 	}
-
-	if err := detectEnvRegistry(reg); err != nil {
-		return service, err
-	}
-
-	if len(registryStruct[reg.Env].Services) == 0 || registryStruct[reg.Env].Services[serviceName].Group == "" {
-		return service, errors.New("service not found")
-	}
-
-	service = registryStruct[reg.Env].Services[serviceName]
-	return service, nil
-}
-
-/**
- * Get all services
- *
- * @return {Services}
- */
-func (reg *RegistryObj) GetServices() (structs.Services, error) {
-	var services structs.Services
-	if err := detectEnvRegistry(reg); err != nil {
-		return services, err
-	}
-
-	services = registryStruct[reg.Env].Services
-	return services, nil
-}
-
-/**
- * Reload registry
- *
- * @return {Boolean}
- */
-func (reg *RegistryObj) Reload() (bool, error) {
-	if reg.Env == "" || reg.ServiceName == "" {
-		return false, errors.New("cannot reload registry env and serviceName are not set")
-	}
-
-	param := map[string]string{"envCode": reg.Env, "serviceName": reg.ServiceName}
-	ExecRegistry(param) // TODO: check return type of execRegistry
-
-	autoReloadChannel <- "reset"
-
-	return true, nil
-}
-
-/**
- * Call registry api
- *
- */
-func ExecRegistry(param map[string]string) (RegistryObj, error) {
-	registryApi := os.Getenv("SOAJS_REGISTRY_API")
-
-	if index := strings.Index(registryApi, ":"); index == -1 {
-		return RegistryObj{}, errors.New("Invalid format for SOAJS_REGISTRY_API [hostname:port]: " + registryApi)
-	}
-
-	registryApiPort := strings.Split(registryApi, ":")[1]
-	if _, err := strconv.Atoi(registryApiPort); err != nil {
-		return RegistryObj{}, errors.New("Port must be an integer [" + registryApiPort + "]")
-	}
-
-	reqUrl := "http://" + registryApi + "/getRegistry?env=" + param["envCode"] + "&serviceName=" + param["serviceName"]
-	httpResponse, err := http.Get(reqUrl)
-	if err != nil {
-		return RegistryObj{}, errors.New("unable to get registry from api gateway")
-	} else {
-		defer httpResponse.Body.Close()
-	}
-	apiResponse, _ := ioutil.ReadAll(httpResponse.Body)
-
-	var temp RegistryApiResponse
-	err = json.Unmarshal(apiResponse, &temp)
-
-	if (err != nil && !temp.Result) || !temp.Result {
-		return RegistryObj{}, errors.New("unable to convert registry to json from returned api gateway response")
-	}
-
-	if len(registryStruct) == 0 {
-		registryStruct = make(map[string]structs.Registry)
-	}
-
-	registryStruct[temp.Data.Environment] = temp.Data
-
-	regObj.Env = param["envCode"]
-	regObj.ServiceName = param["serviceName"]
-	return regObj, nil
-}
-
-func autoReload(param map[string]string) chan string {
-	log.Println("auto reloading ...")
-	regObj, err := ExecRegistry(param)
-	if err != nil {
-		log.Println(err)
-	} else {
-		serviceConfig, _ := regObj.GetServiceConfig()
-		// TODO: assertion on service config content
-
-		interval := time.Duration(serviceConfig.Awareness.AutoReloadRegistry) * time.Millisecond
-		ticker := time.NewTicker(interval)
-
-		go func() {
-			for {
-
-				select {
-				case <-ticker.C:
-					log.Println("Reloading ...")
-					go ExecRegistry(param)
-
-					serviceConfig, _ := regObj.GetServiceConfig()
-					interval = time.Duration(serviceConfig.Awareness.AutoReloadRegistry) * time.Millisecond
-					ticker = time.NewTicker(interval)
-				case msg := <-autoReloadChannel:
-					if msg == "stop" {
-						ticker.Stop()
-						return
-					} else if msg == "reset" {
-						serviceConfig, _ := regObj.GetServiceConfig()
-						interval = time.Duration(serviceConfig.Awareness.AutoReloadRegistry) * time.Millisecond
-						ticker = time.NewTicker(interval)
-					}
-
-				}
-
-			}
-		}()
-	}
-	return autoReloadChannel
+	return nil, errors.New("service not found")
 }

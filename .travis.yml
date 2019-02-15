@@ -29,4 +29,4 @@ before_script:
 script:
   - ./bin/golangci-lint run --config .golangci.yml
   - go test -v -covermode=count -coverprofile=coverage.out ./...
-  - "$HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-pro"
+  - "$HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci"
