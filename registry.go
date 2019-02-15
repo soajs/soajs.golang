@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -71,13 +72,17 @@ func NewRegistry(serviceName, envCode string) (*Registry, error) {
 	}
 
 	reqURL := fmt.Sprintf("http://%s/getRegistry?env=%s&serviceName=%s", addr, envCode, serviceName)
-	httpResponse, err := http.Get(reqURL)
+	res, err := http.Get(reqURL)
 	if err != nil {
 		return nil, fmt.Errorf("could not get registry from api gateway: %v", err)
 	}
-	defer httpResponse.Body.Close()
+	defer res.Body.Close()
+	if res.StatusCode < 200 || res.StatusCode > 299 {
+		b, _ := ioutil.ReadAll(res.Body)
+		return nil, fmt.Errorf("non 2xx status code: %d %v", res.StatusCode, b)
+	}
 	var temp RegistryAPIResponse
-	err = json.NewDecoder(httpResponse.Body).Decode(&temp)
+	err = json.NewDecoder(res.Body).Decode(&temp)
 	if err != nil {
 		return nil, fmt.Errorf("unable to convert registry response: %v", err)
 	}

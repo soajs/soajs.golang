@@ -55,9 +55,9 @@ func TestNewRegistry(t *testing.T) {
 			name:             "bad api call",
 			serviceName:      "test",
 			envCode:          "test",
-			envRegAPI:        "localhost:123",
+			envRegAPI:        "127.0.0.1:123",
 			expectedRegistry: nil,
-			expectedError:    errors.New("could not get registry from api gateway: Get http://localhost:123/getRegistry?env=test&serviceName=test: dial tcp 127.0.0.1:123: connect: connection refused"),
+			expectedError:    errors.New("could not get registry from api gateway: Get http://127.0.0.1:123/getRegistry?env=test&serviceName=test: dial tcp 127.0.0.1:123: connect: connection refused"),
 		},
 	}
 	lastEnvRegAPI := os.Getenv(EnvRegistryAPIAddress)
