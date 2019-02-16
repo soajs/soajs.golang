@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -27,71 +26,108 @@ const (
 	EnvRegistryAPIAddress = "SOAJS_REGISTRY_API"
 )
 
+var (
+	registryStruct map[string]Registry
+)
+
 // InitMiddleware returns http soajs middleware.
-func InitMiddleware(config SOA) func(http.Handler) http.Handler {
+func InitMiddleware(config SOA) (func(http.Handler) http.Handler, error) {
 	registryAPI := os.Getenv(EnvRegistryAPIAddress)
 	soajsEnv := strings.ToLower(os.Getenv(EnvEnv))
-	if soajsEnv != "" && registryAPI != "" {
 
-		manualDeploySrt := os.Getenv(EnvDeployManual)
-		manualDeploy, err := strconv.ParseBool(manualDeploySrt)
-		if err != nil {
-			panic(fmt.Errorf("could not parse %s envaronment variable: %v", EnvDeployManual, err))
-			return SoajsMiddleware
+	if soajsEnv == "" {
+		return nil, fmt.Errorf("could not find environment variable %s", EnvEnv)
+	}
+	if registryAPI == "" {
+		return nil, fmt.Errorf("could not find environment variable %s", EnvRegistryAPIAddress)
+	}
+	if index := strings.Index(registryAPI, ":"); index == -1 {
+		return nil, fmt.Errorf("invalid format for %s. Got [%s], expected [hostname:port]: ", EnvRegistryAPIAddress, registryAPI)
+	}
+	port := strings.Split(registryAPI, ":")[1]
+	if _, err := strconv.Atoi(port); err != nil {
+		return nil, fmt.Errorf("port must be an integer, got %s", port)
+	}
+
+	if config.Type == "" {
+		return nil, fmt.Errorf("could not find [type] in your config, type is <required>")
+	}
+	if config.ServiceName == "" {
+		return nil, fmt.Errorf("could not find [ServiceName] in your config, ServiceName is <required>")
+	}
+	if !(config.ServicePort > 0) {
+		return nil, fmt.Errorf("could not find [ServicePort] in your config, ServicePort is <required>")
+	}
+	if config.ServiceVersion == "" {
+		return nil, fmt.Errorf("could not find [ServiceVersion] in your config, ServiceVersion is <required>")
+	}
+	//TODO: we should add more assurance for config HERE
+
+	reqURL := fmt.Sprintf("http://%s/getRegistry?env=%s&serviceName=%s", registryAPI, soajsEnv, config.ServiceName)
+	reg, err := newRegistry(reqURL, true)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching registry: %v", err)
+	}
+
+	manualDeploySrt := os.Getenv(EnvDeployManual)
+	manualDeploy, err := strconv.ParseBool(manualDeploySrt)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse %s environment variable: %v", EnvDeployManual, err)
+	}
+	if manualDeploy {
+		var conf RegisterConf
+
+		if config.ServiceIP == "" {
+			config.ServiceIP = "127.0.0.1"
 		}
-		if manualDeploy {
-			var conf RegisterConf
 
-			if config.ServiceIP == "" {
-				config.ServiceIP = "127.0.0.1"
-			}
+		conf.Name = config.ServiceName
+		conf.Type = config.Type
+		conf.Mw = true
+		conf.Group = config.ServiceGroup
+		conf.Port = config.ServicePort
+		conf.Swagger = config.Swagger
+		conf.RequestTimeout = config.RequestTimeout
+		conf.RequestTimeoutRenewal = config.RequestTimeoutRenewal
+		conf.Version = config.ServiceVersion
+		conf.ExtKeyRequired = config.ExtKeyRequired
+		conf.Urac = config.Urac
+		conf.UracProfile = config.UracProfile
+		conf.UracACL = config.UracACL
+		conf.ProvisionACL = config.ProvisionACL
+		conf.Oauth = config.Oauth
+		conf.IP = config.ServiceIP
+		conf.Maintenance = config.Maintenance
 
-			conf.Name = config.ServiceName
-			conf.Type = config.Type
-			conf.Mw = true
-			conf.Group = config.ServiceGroup
-			conf.Port = config.ServicePort
-			conf.Swagger = config.Swagger
-			conf.RequestTimeout = config.RequestTimeout
-			conf.RequestTimeoutRenewal = config.RequestTimeoutRenewal
-			conf.Version = config.ServiceVersion
-			conf.ExtKeyRequired = config.ExtKeyRequired
-			conf.Urac = config.Urac
-			conf.UracProfile = config.UracProfile
-			conf.UracACL = config.UracACL
-			conf.ProvisionACL = config.ProvisionACL
-			conf.Oauth = config.Oauth
-			conf.IP = config.ServiceIP
-			conf.Maintenance = config.Maintenance
-
-			d, err := json.Marshal(conf)
-			if err != nil {
-				panic(fmt.Errorf("could not marshal config: %v", err))
-				return SoajsMiddleware
-			}
-			reqURL := fmt.Sprintf("http://%s/register", registryAPI)
-			res, err := http.Post(reqURL, "application/json", bytes.NewBuffer(d))
-			if err != nil {
-				panic(fmt.Errorf("could not call %s: %v", reqURL, err))
-				return SoajsMiddleware
-			}
-			defer res.Body.Close()
-			if res.StatusCode < 200 || res.StatusCode > 299 {
-				b, _ := ioutil.ReadAll(res.Body)
-				panic(fmt.Errorf("non 2xx status code: %d %v", res.StatusCode, b))
-				return SoajsMiddleware
-			}
+		d, err := json.Marshal(conf)
+		if err != nil {
+			return nil, fmt.Errorf("could not marshal manual deploy auto register config: %v", err)
+		}
+		reqURL := fmt.Sprintf("http://%s/register", registryAPI)
+		res, err := http.Post(reqURL, "application/json", bytes.NewBuffer(d))
+		if err != nil {
+			return nil, fmt.Errorf("could not call %s: %v", reqURL, err)
+		}
+		defer res.Body.Close()
+		if res.StatusCode < 200 || res.StatusCode > 299 {
+			b, _ := ioutil.ReadAll(res.Body)
+			return nil, fmt.Errorf("non 2xx status code: %d %v", res.StatusCode, b)
+		}
+		var temp RegisterAPIResponse
+		err = json.NewDecoder(res.Body).Decode(&temp)
+		if err != nil || !temp.Result {
+			return nil, fmt.Errorf("unable to register service at gateway: %v", err)
 		}
 	}
-	return SoajsMiddleware
+
+	return reg.SoajsMiddleware, nil
 }
 
 // SoajsMiddleware the middleware that gets triggered per request
-func SoajsMiddleware(next http.Handler) http.Handler {
+func (reg Registry) SoajsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		d, err := headerData(r)
 		if err != nil {
-			log.Println(err)
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -106,7 +142,7 @@ func SoajsMiddleware(next http.Handler) http.Handler {
 			Device:         d.Device,
 			Geo:            d.Geo,
 			Awareness:      d.Awareness,
-			//Reg:            reg,
+			Reg:            reg,
 		}
 		out.Tenant.Key.IKey = d.Key.IKey
 		out.Tenant.Key.EKey = d.Key.EKey

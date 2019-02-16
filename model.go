@@ -1,7 +1,5 @@
 package soajsgo
 
-import "time"
-
 type (
 	SOA struct {
 		Type          string `json:"type"`
@@ -149,26 +147,55 @@ type (
 		Port int    `json:"port"`
 	}
 
+	// RegistryAPIResponse represents registry API response from soajs gateway
+	RegistryAPIResponse struct {
+		Result  bool  `json:"result"`
+		Ts      int64 `json:"ts"`
+		Service struct {
+			ServiceName string `json:"service"`
+			Type        string `json:"type"`
+			Route       string `json:"route"`
+		} `json:"service"`
+		Registry Registry `json:"data"`
+	}
+	// RegisterAPIResponse represents registry API response from soajs gateway
+	RegisterAPIResponse struct {
+		Result  bool  `json:"result"`
+		Ts      int64 `json:"ts"`
+		Service struct {
+			ServiceName string `json:"service"`
+			Type        string `json:"type"`
+			Route       string `json:"route"`
+		} `json:"service"`
+	}
+
 	// Registry represents registry structure.
 	Registry struct {
+		Url         string `json:"url"`
 		TimeLoaded  int64  `json:"timeLoaded"`
 		Name        string `json:"name"`
 		Environment string `json:"environment"`
 
-		CoreDBs       map[string]Database `json:"coreDB"`
-		TenantMetaDBs map[string]Database `json:"tenantMetaDB"`
+		CoreDBs       Databases `json:"coreDB"`
+		TenantMetaDBs Databases `json:"tenantMetaDB"`
 
-		ServiceConfig ServiceConfig      `json:"serviceConfig"`
-		Custom        CustomRegistries   `json:"custom"`
-		Resources     Resources          `json:"resources"`
-		Services      map[string]Service `json:"services"`
+		ServiceConfig ServiceConfig    `json:"serviceConfig"`
+		Custom        CustomRegistries `json:"custom"`
+		Resources     Resources        `json:"resources"`
+		Services      Services         `json:"services"`
 	}
+
+	Databases        map[string]Database
+	CustomRegistries map[string]CustomRegistry
+	Resources        map[string]map[string]Resource
+	Services         map[string]Service
+
 	// Database represents a Database structure with configuration fields.
 	Database struct {
 		Name             string           `json:"name"`
 		Prefix           string           `json:"prefix"`
 		Cluster          string           `json:"cluster"`
-		Server           Host             `json:"servers"`
+		Server           []Host           `json:"servers"`
 		Credentials      Credentials      `json:"credentials"`
 		Streaming        interface{}      `json:"streaming"`
 		RegistryLocation RegistryLocation `json:"registryLocation"`
@@ -204,11 +231,11 @@ type (
 	}
 	// ServiceConfigIntervals represents amount of time in milliseconds.
 	ServiceConfigIntervals struct {
-		CacheTTL            int           `json:"cacheTTL"`
-		HealthCheckInterval int           `json:"healthCheckInterval"`
-		AutoReloadRegistry  time.Duration `json:"autoReloadRegistry"`
-		MaxLogCount         int           `json:"maxLogCount"`
-		AutoRegisterService bool          `json:"autoRegisterService"`
+		CacheTTL            int  `json:"cacheTTL"`
+		HealthCheckInterval int  `json:"healthCheckInterval"`
+		AutoReloadRegistry  int  `json:"autoRelaodRegistry"`
+		MaxLogCount         int  `json:"maxLogCount"`
+		AutoRegisterService bool `json:"autoRegisterService"`
 	}
 	// Agent contains topology direction.
 	Agent struct {
@@ -257,8 +284,7 @@ type (
 		Secure   bool        `json:"secure"`
 		MaxAge   interface{} `json:"maxAge"`
 	}
-	// CustomRegistries is CustomRegistry map.
-	CustomRegistries map[string]CustomRegistry
+
 	// CustomRegistry represents custom registry information.
 	CustomRegistry struct {
 		ID      string      `json:"_id"`
@@ -270,8 +296,7 @@ type (
 		Created string      `json:"created"`
 		Author  string      `json:"author"`
 	}
-	// Resources represents resource map.
-	Resources map[string]map[string]Resource
+
 	// Resource represents resource structure.
 	Resource struct {
 		ID       string      `json:"_id"`
@@ -285,6 +310,7 @@ type (
 		Shared   bool        `json:"shared"`
 		Config   interface{} `json:"config"`
 	}
+
 	// Service represents service structure.
 	Service struct {
 		Group                 string `json:"group"`
@@ -292,7 +318,7 @@ type (
 		RequestTimeout        int    `json:"requestTimeout"`
 		RequestTimeoutRenewal int    `json:"requestTimeoutRenewal"`
 		MaxPoolSize           int    `json:"maxPoolSize"`
-		Version               int    `json:"version"`
+		Version               string `json:"version"`
 		Authorization         bool   `json:"authorization"`
 		ExtKeyRequired        bool   `json:"extKeyRequired"`
 	}
