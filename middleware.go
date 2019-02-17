@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -24,10 +25,6 @@ const (
 	headerDataName = "soajsinjectobj"
 
 	EnvRegistryAPIAddress = "SOAJS_REGISTRY_API"
-)
-
-var (
-	registryStruct map[string]Registry
 )
 
 // InitMiddleware returns http soajs middleware.
@@ -49,6 +46,8 @@ func InitMiddleware(config SOA) (func(http.Handler) http.Handler, error) {
 		return nil, fmt.Errorf("port must be an integer, got %s", port)
 	}
 
+	var validVersion = regexp.MustCompile(`[0-9]+(.[0-9]+)?`)
+
 	if config.Type == "" {
 		return nil, fmt.Errorf("could not find [type] in your config, type is <required>")
 	}
@@ -60,6 +59,9 @@ func InitMiddleware(config SOA) (func(http.Handler) http.Handler, error) {
 	}
 	if config.ServiceVersion == "" {
 		return nil, fmt.Errorf("could not find [ServiceVersion] in your config, ServiceVersion is <required>")
+	}
+	if !validVersion.MatchString(config.ServiceVersion) {
+		return nil, fmt.Errorf("error with [ServiceVersion] in your config, ServiceVersion syntax is [[0-9]+(.[0-9]+)?]")
 	}
 	//TODO: we should add more assurance for config HERE
 
@@ -120,11 +122,11 @@ func InitMiddleware(config SOA) (func(http.Handler) http.Handler, error) {
 		}
 	}
 
-	return reg.SoajsMiddleware, nil
+	return reg.soajsMiddleware, nil
 }
 
 // SoajsMiddleware the middleware that gets triggered per request
-func (reg Registry) SoajsMiddleware(next http.Handler) http.Handler {
+func (reg Registry) soajsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		d, err := headerData(r)
 		if err != nil {

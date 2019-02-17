@@ -17,7 +17,7 @@ type RegistryObj struct {
 var autoReloadChannel = make(chan string)
 
 func newRegistry(reqURL string, turnOnAutoReload bool) (*Registry, error) {
-	res, err := http.Get(reqURL)
+	var res, err = http.Get(reqURL)
 	if err != nil {
 		return nil, fmt.Errorf("could not get registry from soajs gateway: %v", err)
 	}
@@ -32,7 +32,7 @@ func newRegistry(reqURL string, turnOnAutoReload bool) (*Registry, error) {
 		return nil, fmt.Errorf("unable to convert registry response: %v", err)
 	}
 
-	temp.Registry.Url = reqURL
+	temp.Registry.url = reqURL
 
 	if turnOnAutoReload {
 		go autoReload(&temp.Registry)
@@ -50,7 +50,7 @@ func autoReload(reg *Registry) chan string {
 
 			select {
 			case <-ticker.C:
-				temp, err := newRegistry(reg.Url, false)
+				temp, err := newRegistry(reg.url, false)
 				if err == nil {
 					*reg = *temp
 					interval = time.Duration(reg.ServiceConfig.Awareness.AutoReloadRegistry) * time.Millisecond
@@ -80,7 +80,7 @@ func autoReload(reg *Registry) chan string {
  */
 func (reg *Registry) Reload() (bool, error) {
 
-	temp, err := newRegistry(reg.Url, false)
+	temp, err := newRegistry(reg.url, false)
 	if err == nil {
 		*reg = *temp
 		autoReloadChannel <- "reset"
@@ -130,4 +130,26 @@ func (reg Registry) GetResource(name string) (*Resource, error) {
 		}
 	}
 	return nil, errors.New("resource not found")
+}
+
+/**
+ * Get one database
+ * @param  {String}     name
+ * @return {Database}
+ */
+func (reg Registry) GetDatabase(name string) (*Database, error) {
+	if name == "" {
+		return nil, errors.New("database name is required")
+	}
+	var d Database
+
+	if len(reg.CoreDBs) > 0 && reg.CoreDBs[name].Name != "" {
+		d = reg.CoreDBs[name]
+	} else if len(reg.TenantMetaDBs) > 0 && reg.TenantMetaDBs[name].Name != "" {
+		d = reg.TenantMetaDBs[name]
+	} else {
+		return nil, errors.New("database not found")
+	}
+
+	return &d, nil
 }

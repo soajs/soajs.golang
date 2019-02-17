@@ -171,8 +171,8 @@ type (
 
 	// Registry represents registry structure.
 	Registry struct {
-		Url         string `json:"url"`
-		TimeLoaded  int64  `json:"timeLoaded"`
+		url         string `json:"url"`
+		timeLoaded  int64  `json:"timeLoaded"`
 		Name        string `json:"name"`
 		Environment string `json:"environment"`
 
