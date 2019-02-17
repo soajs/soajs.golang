@@ -77,7 +77,7 @@ func InitMiddleware(config SOA) (func(http.Handler) http.Handler, error) {
 		return nil, fmt.Errorf("could not parse %s environment variable: %v", EnvDeployManual, err)
 	}
 	if manualDeploy {
-		var conf RegisterConf
+		var conf registerConf
 
 		if config.ServiceIP == "" {
 			config.ServiceIP = "127.0.0.1"
@@ -115,7 +115,7 @@ func InitMiddleware(config SOA) (func(http.Handler) http.Handler, error) {
 			b, _ := ioutil.ReadAll(res.Body)
 			return nil, fmt.Errorf("non 2xx status code: %d %v", res.StatusCode, b)
 		}
-		var temp RegisterAPIResponse
+		var temp registerAPIResponse
 		err = json.NewDecoder(res.Body).Decode(&temp)
 		if err != nil || !temp.Result {
 			return nil, fmt.Errorf("unable to register service at gateway: %v", err)
@@ -158,12 +158,12 @@ func (reg Registry) soajsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func headerData(r *http.Request) (*HeaderInfo, error) {
+func headerData(r *http.Request) (*headerInfo, error) {
 	headerData := r.Header.Get(headerDataName)
 	if headerData == "" {
 		return nil, nil
 	}
-	d := new(HeaderInfo)
+	d := new(headerInfo)
 	if err := json.Unmarshal([]byte(headerData), d); err != nil {
 		return nil, errors.New("unable to parse SOAJS header")
 	}

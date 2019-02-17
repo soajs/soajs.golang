@@ -1,6 +1,7 @@
 package soajsgo
 
 type (
+	// SOA is the input config object needed by the middleware.
 	SOA struct {
 		Type          string `json:"type"`
 		Prerequisites struct {
@@ -34,7 +35,8 @@ type (
 		} `json:"maintenance"`
 	}
 
-	RegisterConf struct {
+	// registerConf represents the config object to send to soajs gateway as post data.
+	registerConf struct {
 		Name                  string `json:"name"`
 		Type                  string `json:"type"`
 		Mw                    bool   `json:"mw"`
@@ -64,6 +66,47 @@ type (
 		} `json:"maintenance"`
 	}
 
+	// RegistryAPIResponse represents registry API response from soajs gateway.
+	registryAPIResponse struct {
+		Result  bool  `json:"result"`
+		Ts      int64 `json:"ts"`
+		Service struct {
+			ServiceName string `json:"service"`
+			Type        string `json:"type"`
+			Route       string `json:"route"`
+		} `json:"service"`
+		Registry Registry `json:"data"`
+	}
+	// RegisterAPIResponse represents registry API response from soajs gateway.
+	registerAPIResponse struct {
+		Result  bool  `json:"result"`
+		Ts      int64 `json:"ts"`
+		Service struct {
+			ServiceName string `json:"service"`
+			Type        string `json:"type"`
+			Route       string `json:"route"`
+		} `json:"service"`
+	}
+
+	// HeaderInfo represents header info structure.
+	headerInfo struct {
+		Tenant      Tenant      `json:"tenant"`
+		Key         Key         `json:"key"`
+		Application Application `json:"application"`
+		Package     struct {
+			ACL       interface{} `json:"acl"`
+			ACLAllEnv interface{} `json:"acl_all_env"`
+		} `json:"package"`
+		Device    string            `json:"device"`
+		Geo       map[string]string `json:"geo"`
+		Urac      Urac              `json:"urac"`
+		Awareness Host              `json:"awareness"`
+		Param     struct {
+			UracProfile bool `json:"urac_Profile"`
+			UracACL     bool `json:"urac_ACL"`
+		} `json:"param"`
+	}
+
 	// ContextData represents http context data information.
 	ContextData struct {
 		Tenant         Tenant            `json:"tenant"`
@@ -75,18 +118,6 @@ type (
 		Reg            Registry          `json:"reg"`
 	}
 
-	// HeaderInfo represents header info structure.
-	HeaderInfo struct {
-		Tenant      Tenant            `json:"tenant"`
-		Key         Key               `json:"key"`
-		Application Application       `json:"application"`
-		Package     Package           `json:"package"`
-		Device      string            `json:"device"`
-		Geo         map[string]string `json:"geo"`
-		Urac        Urac              `json:"urac"`
-		Awareness   Host              `json:"awareness"`
-		Param       Param             `json:"param"`
-	}
 	// Tenant contains the tenant information.
 	Tenant struct {
 		ID      string      `json:"id"`
@@ -114,11 +145,7 @@ type (
 		PackageACL       interface{} `json:"package_acl"`
 		PackageACLAllEnv interface{} `json:"package_acl_all_env"`
 	}
-	// Package represents the Productization that the tenant making the call to the API is using.
-	Package struct {
-		ACL       interface{} `json:"acl"`
-		ACLAllEnv interface{} `json:"acl_all_env"`
-	}
+
 	// Urac is the logged in user record in case urac is set to true.
 	Urac struct {
 		ID          string      `json:"_id"`
@@ -136,37 +163,11 @@ type (
 		ACL       interface{} `json:"acl"`
 		ACLAllEnv interface{} `json:"acl_all_env"`
 	}
-	// Param represents Urac params.
-	Param struct {
-		UracProfile bool `json:"urac_Profile"`
-		UracACL     bool `json:"urac_ACL"`
-	}
+
 	// Host represents host information.
 	Host struct {
 		Host string `json:"host"`
 		Port int    `json:"port"`
-	}
-
-	// RegistryAPIResponse represents registry API response from soajs gateway
-	RegistryAPIResponse struct {
-		Result  bool  `json:"result"`
-		Ts      int64 `json:"ts"`
-		Service struct {
-			ServiceName string `json:"service"`
-			Type        string `json:"type"`
-			Route       string `json:"route"`
-		} `json:"service"`
-		Registry Registry `json:"data"`
-	}
-	// RegisterAPIResponse represents registry API response from soajs gateway
-	RegisterAPIResponse struct {
-		Result  bool  `json:"result"`
-		Ts      int64 `json:"ts"`
-		Service struct {
-			ServiceName string `json:"service"`
-			Type        string `json:"type"`
-			Route       string `json:"route"`
-		} `json:"service"`
 	}
 
 	// Registry represents registry structure.
@@ -185,6 +186,54 @@ type (
 		Services      Services         `json:"services"`
 	}
 
+	// ServiceConfig represents service config.
+	ServiceConfig struct {
+		Awareness struct {
+			CacheTTL            int  `json:"cacheTTL"`
+			HealthCheckInterval int  `json:"healthCheckInterval"`
+			AutoReloadRegistry  int  `json:"autoRelaodRegistry"`
+			MaxLogCount         int  `json:"maxLogCount"`
+			AutoRegisterService bool `json:"autoRegisterService"`
+		} `json:"awareness"`
+		Agent struct {
+			TopologyDir string `json:"topologyDir"`
+		} `json:"agent"`
+		Key struct {
+			Algorithm string `json:"algorithm"`
+			Password  string `json:"password"`
+		} `json:"key"`
+		Logger struct {
+			Src       bool   `json:"src"`
+			Level     string `json:"level"`
+			Formatter struct {
+				LevelInString bool   `json:"levelInString"`
+				OutputMode    string `json:"outputMode"`
+			} `json:"formatter"`
+		} `json:"logger"`
+		Port struct {
+			Controller     int `json:"controller"`
+			MaintenanceInc int `json:"maintenanceInc"`
+			RandomInc      int `json:"randomInc"`
+		} `json:"ports"`
+		Cookie struct {
+			Secret string `json:"secret"`
+		} `json:"cookie"`
+		Session struct {
+			Name   string `json:"name"`
+			Secret string `json:"secret"`
+			Cookie struct {
+				Path     string      `json:"path"`
+				HTTPOnly bool        `json:"httpOnly"`
+				Secure   bool        `json:"secure"`
+				MaxAge   interface{} `json:"maxAge"`
+			} `json:"cookie"`
+			Resave            bool   `json:"resave"`
+			SaveUninitialized bool   `json:"saveUninitialized"`
+			Rolling           bool   `json:"rolling"`
+			Unset             string `json:"unset"`
+		} `json:"session"`
+	}
+
 	Databases        map[string]Database
 	CustomRegistries map[string]CustomRegistry
 	Resources        map[string]map[string]Resource
@@ -192,97 +241,31 @@ type (
 
 	// Database represents a Database structure with configuration fields.
 	Database struct {
-		Name             string           `json:"name"`
-		Prefix           string           `json:"prefix"`
-		Cluster          string           `json:"cluster"`
-		Server           []Host           `json:"servers"`
-		Credentials      Credentials      `json:"credentials"`
-		Streaming        interface{}      `json:"streaming"`
-		RegistryLocation RegistryLocation `json:"registryLocation"`
-		URLParam         interface{}      `json:"URLParam"`
-		ExtraParam       interface{}      `json:"extraParam"`
+		Name    string `json:"name"`
+		Prefix  string `json:"prefix"`
+		Cluster string `json:"cluster"`
+		Server  []struct {
+			Host string `json:"host"`
+			Port int    `json:"port"`
+		} `json:"servers"`
+		Credentials struct {
+			Username string `json:"username"`
+			Password string `json:"password"`
+		} `json:"credentials"`
+		Streaming        interface{} `json:"streaming"`
+		RegistryLocation struct {
+			L1  string `json:"l1"`
+			L2  string `json:"l2"`
+			Env string `json:"env"`
+		} `json:"registryLocation"`
+		URLParam   interface{} `json:"URLParam"`
+		ExtraParam interface{} `json:"extraParam"`
 
 		// NOTE: session specific entries
 		Store       interface{} `json:"store,omitempty"`
 		Collection  string      `json:"collection,omitempty"`
 		Stringify   bool        `json:"stringify,omitempty"`
 		ExpireAfter int         `json:"expireAfter,omitempty"`
-	}
-	// Credentials contains username and password.
-	Credentials struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-	}
-	// RegistryLocation represents database location.
-	RegistryLocation struct {
-		L1  string `json:"l1"`
-		L2  string `json:"l2"`
-		Env string `json:"env"`
-	}
-	// ServiceConfig represents service config.
-	ServiceConfig struct {
-		Awareness ServiceConfigIntervals `json:"awareness"`
-		Agent     Agent                  `json:"agent"`
-		Key       ServiceKey             `json:"key"`
-		Logger    Logger                 `json:"logger"`
-		Port      ServicePort            `json:"ports"`
-		Cookie    Cookie                 `json:"cookie"`
-		Session   Session                `json:"session"`
-	}
-	// ServiceConfigIntervals represents amount of time in milliseconds.
-	ServiceConfigIntervals struct {
-		CacheTTL            int  `json:"cacheTTL"`
-		HealthCheckInterval int  `json:"healthCheckInterval"`
-		AutoReloadRegistry  int  `json:"autoRelaodRegistry"`
-		MaxLogCount         int  `json:"maxLogCount"`
-		AutoRegisterService bool `json:"autoRegisterService"`
-	}
-	// Agent contains topology direction.
-	Agent struct {
-		TopologyDir string `json:"topologyDir"`
-	}
-	// ServiceKey represents which algorithm should bcrypt use and secret phrase to encrypt tenant key security accordingly.
-	ServiceKey struct {
-		Algorithm string `json:"algorithm"`
-		Password  string `json:"password"`
-	}
-	// Logger represents custom logger object.
-	Logger struct {
-		Src       bool      `json:"src"`
-		Level     string    `json:"level"`
-		Formatter Formatter `json:"formatter"`
-	}
-	// Formatter contains specific configuration for logging formatting.
-	Formatter struct {
-		LevelInString bool   `json:"levelInString"`
-		OutputMode    string `json:"outputMode"`
-	}
-	// ServicePort provides default ports.
-	ServicePort struct {
-		Controller     int `json:"controller"`
-		MaintenanceInc int `json:"maintenanceInc"`
-		RandomInc      int `json:"randomInc"`
-	}
-	// Cookie contents the cookie secret phrase, used to encrypt cookie values, minimum 5 characters.
-	Cookie struct {
-		Secret string `json:"secret"`
-	}
-	// Session is session data from the multi-tenant session.
-	Session struct {
-		Name              string        `json:"name"`
-		Secret            string        `json:"secret"`
-		Cookie            SessionCookie `json:"cookie"`
-		Resave            bool          `json:"resave"`
-		SaveUninitialized bool          `json:"saveUninitialized"`
-		Rolling           bool          `json:"rolling"`
-		Unset             string        `json:"unset"`
-	}
-	// SessionCookie represents path where cookies should be created and other options related to cookies.
-	SessionCookie struct {
-		Path     string      `json:"path"`
-		HTTPOnly bool        `json:"httpOnly"`
-		Secure   bool        `json:"secure"`
-		MaxAge   interface{} `json:"maxAge"`
 	}
 
 	// CustomRegistry represents custom registry information.

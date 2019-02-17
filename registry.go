@@ -9,11 +9,6 @@ import (
 	"time"
 )
 
-type RegistryObj struct {
-	Env         string `json:"env"`
-	ServiceName string `json:"serviceName"`
-}
-
 var autoReloadChannel = make(chan string)
 
 func newRegistry(reqURL string, turnOnAutoReload bool) (*Registry, error) {
@@ -26,7 +21,7 @@ func newRegistry(reqURL string, turnOnAutoReload bool) (*Registry, error) {
 		b, _ := ioutil.ReadAll(res.Body)
 		return nil, fmt.Errorf("non 2xx status code: %d %v", res.StatusCode, b)
 	}
-	var temp RegistryAPIResponse
+	var temp registryAPIResponse
 	err = json.NewDecoder(res.Body).Decode(&temp)
 	if err != nil || !temp.Result {
 		return nil, fmt.Errorf("unable to convert registry response: %v", err)
