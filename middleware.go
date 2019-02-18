@@ -31,6 +31,7 @@ const (
 )
 
 // InitMiddleware returns http middleware with registry inside.
+// This function starts registry auto reload every AutoReloadRegistry. You can break this process using context.
 // nolint: errcheck
 func InitMiddleware(ctx context.Context, config Config) (func(http.Handler) http.Handler, error) {
 	registryAPI := os.Getenv(EnvRegistryAPIAddress)
@@ -77,7 +78,7 @@ func InitMiddleware(ctx context.Context, config Config) (func(http.Handler) http
 		defer res.Body.Close()
 		if res.StatusCode < 200 || res.StatusCode > 299 {
 			b, _ := ioutil.ReadAll(res.Body)
-			return nil, fmt.Errorf("non 2xx status code: %d %v", res.StatusCode, b)
+			return nil, fmt.Errorf("non 2xx status code: %d %s", res.StatusCode, b)
 		}
 	}
 

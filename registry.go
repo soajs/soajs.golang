@@ -79,7 +79,7 @@ func NewRegistry(serviceName, envCode string) (*Registry, error) {
 	defer res.Body.Close()
 	if res.StatusCode < 200 || res.StatusCode > 299 {
 		b, _ := ioutil.ReadAll(res.Body)
-		return nil, fmt.Errorf("non 2xx status code: %d %v", res.StatusCode, b)
+		return nil, fmt.Errorf("non 2xx status code: %d %s", res.StatusCode, b)
 	}
 	var temp RegistryAPIResponse
 	err = json.NewDecoder(res.Body).Decode(&temp)
