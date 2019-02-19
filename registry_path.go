@@ -53,7 +53,9 @@ func registryResponse(res *http.Response) (*Registry, error) {
 		return nil, fmt.Errorf("could not decode registry response: %v", err)
 	}
 	if len(regRes.Errors.Details) > 0 {
-		return nil, fmt.Errorf("unable to register service at gateway: [%d] [%s]", regRes.Errors.Details[0].Code, regRes.Errors.Details[0].Message)
+		return nil, fmt.Errorf("unable to register service at gateway: [%d] [%s]",
+			regRes.Errors.Details[0].Code,
+			regRes.Errors.Details[0].Message)
 	}
 	if !regRes.Result {
 		return nil, errors.New("negative result by registry")

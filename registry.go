@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// NewRegistry creates and initialises new registry by service name and code.
+// NewRegistry creates and initializes new registry by service name and code.
 // see: https://soajsorg.atlassian.net/wiki/spaces/SOAJ/pages/61347270/Service
 // nolint: errcheck
 func NewRegistry(ctx context.Context, serviceName, envCode string, turnOnAutoReload bool) (*Registry, error) {

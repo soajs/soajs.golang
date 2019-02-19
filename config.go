@@ -33,7 +33,7 @@ type (
 )
 
 // Validate validates soajs config.
-func (c Config) Validate() error {
+func (c *Config) Validate() error {
 	if c.Type == "" {
 		return errors.New("could not find [Type] in your config, Type is <required>")
 	}
