@@ -51,7 +51,7 @@ func TestInitMiddleware(t *testing.T) {
 			},
 			envRegAPI:   "api:123",
 			envEnv:      "env",
-			expectedErr: errors.New("could not fetch registry: could not init registry from api gateway: Get http://api:123/getRegistry?env=env&serviceName=name: dial tcp: lookup api: no such host"),
+			expectedErr: errors.New("could not fetch registry: could not init registry from api gateway: Get http://api:123/getRegistry?env=env&serviceName=name"),
 		},
 	}
 	lastEnvRegAPI := os.Getenv(EnvRegistryAPIAddress)
@@ -64,7 +64,7 @@ func TestInitMiddleware(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			_, err := InitMiddleware(ctx, tc.config)
 			cancel()
-			assert.Equal(t, tc.expectedErr, err)
+			assert.Contains(t, err.Error(), tc.expectedErr.Error())
 
 			assert.NoError(t, os.Setenv(EnvRegistryAPIAddress, lastEnvRegAPI))
 			assert.NoError(t, os.Setenv(EnvEnv, lastEnvEnv))
