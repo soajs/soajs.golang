@@ -1,8 +1,8 @@
 package soajsgo
 
 import (
+	"context"
 	"errors"
-	"fmt"
 	"os"
 	"testing"
 
@@ -33,7 +33,7 @@ func TestNewRegistry(t *testing.T) {
 			envCode:          "test",
 			envRegAPI:        "",
 			expectedRegistry: nil,
-			expectedError:    fmt.Errorf("could not find environment variable %s", EnvRegistryAPIAddress),
+			expectedError:    errors.New("could not init registry api path: could not find environment variable SOAJS_REGISTRY_API"),
 		},
 		{
 			name:             "bad api path",
@@ -41,7 +41,7 @@ func TestNewRegistry(t *testing.T) {
 			envCode:          "test",
 			envRegAPI:        "localhost",
 			expectedRegistry: nil,
-			expectedError:    fmt.Errorf("invalid format for %s. Got [localhost], expected [hostname:port]: ", EnvRegistryAPIAddress),
+			expectedError:    errors.New("could not init registry api path: invalid format for SOAJS_REGISTRY_API. Got [localhost], expected [hostname:port]"),
 		},
 		{
 			name:             "bad api path port",
@@ -49,7 +49,7 @@ func TestNewRegistry(t *testing.T) {
 			envCode:          "test",
 			envRegAPI:        "localhost:test",
 			expectedRegistry: nil,
-			expectedError:    errors.New("port must be an integer, got test"),
+			expectedError:    errors.New("could not init registry api path: port must be an integer, got test"),
 		},
 		{
 			name:             "bad api call",
@@ -57,14 +57,14 @@ func TestNewRegistry(t *testing.T) {
 			envCode:          "test",
 			envRegAPI:        "127.0.0.1:123",
 			expectedRegistry: nil,
-			expectedError:    errors.New("could not get registry from api gateway: Get http://127.0.0.1:123/getRegistry?env=test&serviceName=test: dial tcp 127.0.0.1:123: connect: connection refused"),
+			expectedError:    errors.New("could not init registry from api gateway: Get http://127.0.0.1:123/getRegistry?env=test&serviceName=test: dial tcp 127.0.0.1:123: connect: connection refused"),
 		},
 	}
 	lastEnvRegAPI := os.Getenv(EnvRegistryAPIAddress)
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			require.NoError(t, os.Setenv(EnvRegistryAPIAddress, tc.envRegAPI))
-			reg, err := NewRegistry(tc.serviceName, tc.envCode)
+			reg, err := NewRegistry(context.Background(), tc.serviceName, tc.envCode, false)
 			assert.Equal(t, tc.expectedError, err)
 			assert.Equal(t, tc.expectedRegistry, reg)
 			assert.NoError(t, os.Setenv(EnvRegistryAPIAddress, lastEnvRegAPI))

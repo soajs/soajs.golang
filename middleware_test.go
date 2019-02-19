@@ -21,18 +21,37 @@ func TestInitMiddleware(t *testing.T) {
 		expectedErr error
 	}{
 		{
-			name:        "no envs",
-			config:      Config{},
-			envRegAPI:   "",
-			envEnv:      "",
-			expectedErr: nil,
-		},
-		{
 			name:        "registry error",
 			config:      Config{},
 			envRegAPI:   "api",
+			envEnv:      "",
+			expectedErr: errors.New("could not init registry api path: invalid format for SOAJS_REGISTRY_API. Got [api], expected [hostname:port]"),
+		},
+		{
+			name:        "empty env",
+			config:      Config{},
+			envRegAPI:   "api:123",
+			envEnv:      "",
+			expectedErr: errors.New("could not find environment variable SOAJS_ENV"),
+		},
+		{
+			name:        "bad config",
+			config:      Config{},
+			envRegAPI:   "api:123",
 			envEnv:      "env",
-			expectedErr: errors.New("could not create new registry: service name and env code are required"),
+			expectedErr: errors.New("could not find [Type] in your config, Type is <required>"),
+		},
+		{
+			name: "registry error",
+			config: Config{
+				Type:           "type",
+				ServiceName:    "name",
+				ServiceVersion: "v1",
+				ServicePort:    10,
+			},
+			envRegAPI:   "api:123",
+			envEnv:      "env",
+			expectedErr: errors.New("could not fetch registry: could not init registry from api gateway: Get http://api:123/getRegistry?env=env&serviceName=name: dial tcp: lookup api: no such host"),
 		},
 	}
 	lastEnvRegAPI := os.Getenv(EnvRegistryAPIAddress)
@@ -103,7 +122,7 @@ func TestHeaderData(t *testing.T) {
 	tt := []struct {
 		name         string
 		data         string
-		expectedInfo *HeaderInfo
+		expectedInfo *headerInfo
 		expectedErr  error
 	}{
 		{
@@ -121,7 +140,7 @@ func TestHeaderData(t *testing.T) {
 		{
 			name:         "all ok",
 			data:         `{"device":"iPhone"}`,
-			expectedInfo: &HeaderInfo{Device: "iPhone"},
+			expectedInfo: &headerInfo{Device: "iPhone"},
 			expectedErr:  nil,
 		},
 	}
