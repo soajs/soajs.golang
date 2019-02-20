@@ -37,8 +37,8 @@ const (
 	// the registry of this environment and supply it to your service.
 	EnvRegistryAPIAddress = "SOAJS_REGISTRY_API"
 
-	// EnvEnv is the environment variable name that contains the name of the environment where the service is running at.
-	EnvEnv = "SOAJS_ENV"
+	// EnvSoajsEnv is the environment variable name that contains the name of the environment where the service is running at.
+	EnvSoajsEnv = "SOAJS_ENV"
 
 	// EnvDeployManual is the environment variable name that indicates if the service has been deployed manually or not.
 	EnvDeployManual = "SOAJS_DEPLOY_MANUAL"

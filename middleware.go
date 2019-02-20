@@ -32,9 +32,9 @@ func InitMiddleware(ctx context.Context, config Config) (func(http.Handler) http
 	if err != nil {
 		return nil, fmt.Errorf("could not init registry api path: %v", err)
 	}
-	soajsEnv := strings.ToLower(os.Getenv(EnvEnv))
+	soajsEnv := strings.ToLower(os.Getenv(EnvSoajsEnv))
 	if soajsEnv == "" {
-		return nil, fmt.Errorf("could not find environment variable %s", EnvEnv)
+		return nil, fmt.Errorf("could not find environment variable %s", EnvSoajsEnv)
 	}
 	if err := config.Validate(); err != nil {
 		return nil, err

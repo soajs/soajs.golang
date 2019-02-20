@@ -55,11 +55,11 @@ func TestInitMiddleware(t *testing.T) {
 		},
 	}
 	lastEnvRegAPI := os.Getenv(EnvRegistryAPIAddress)
-	lastEnvEnv := os.Getenv(EnvEnv)
+	lastEnvEnv := os.Getenv(EnvSoajsEnv)
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			require.NoError(t, os.Setenv(EnvRegistryAPIAddress, tc.envRegAPI))
-			require.NoError(t, os.Setenv(EnvEnv, tc.envEnv))
+			require.NoError(t, os.Setenv(EnvSoajsEnv, tc.envEnv))
 
 			ctx, cancel := context.WithCancel(context.Background())
 			_, err := InitMiddleware(ctx, tc.config)
@@ -67,7 +67,7 @@ func TestInitMiddleware(t *testing.T) {
 			assert.Contains(t, err.Error(), tc.expectedErr.Error())
 
 			assert.NoError(t, os.Setenv(EnvRegistryAPIAddress, lastEnvRegAPI))
-			assert.NoError(t, os.Setenv(EnvEnv, lastEnvEnv))
+			assert.NoError(t, os.Setenv(EnvSoajsEnv, lastEnvEnv))
 		})
 	}
 }
