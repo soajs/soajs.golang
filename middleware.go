@@ -43,11 +43,19 @@ func InitMiddleware(ctx context.Context, config Config) (func(http.Handler) http
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch registry: %v", err)
 	}
+	err = manualDeploy(config, addr)
+	if err != nil {
+		return nil, err
+	}
 
+	return reg.Middleware, nil
+}
+
+func manualDeploy(config Config, addr *registryPath) error {
 	manualDeploySrt := os.Getenv(EnvDeployManual)
 	manualDeploy, err := strconv.ParseBool(manualDeploySrt)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse %s envaronment variable: %v", EnvDeployManual, err)
+		return fmt.Errorf("could not parse %s environment variable: %v", EnvDeployManual, err)
 	}
 	if manualDeploy {
 		if config.ServiceIP == "" {
@@ -74,20 +82,19 @@ func InitMiddleware(ctx context.Context, config Config) (func(http.Handler) http
 		}
 		d, err := json.Marshal(regConf)
 		if err != nil {
-			return nil, fmt.Errorf("could not marshal manual deploy auto register config: %v", err)
+			return fmt.Errorf("could not marshal manual deploy auto register config: %v", err)
 		}
 		res, err := http.Post(addr.register(), "application/json", bytes.NewBuffer(d))
 		if err != nil {
-			return nil, fmt.Errorf("could not call %s: %v", addr.register(), err)
+			return fmt.Errorf("could not call %s: %v", addr.register(), err)
 		}
 		defer res.Body.Close()
 		_, err = registryResponse(res)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
-
-	return reg.Middleware, nil
+	return nil
 }
 
 // Middleware is http middleware that gets triggered per request.

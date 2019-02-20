@@ -72,6 +72,42 @@ func TestInitMiddleware(t *testing.T) {
 	}
 }
 
+func TestManualDeploy(t *testing.T) {
+	tt := []struct {
+		name            string
+		envDeployManual string
+		config          Config
+		expectedErr     error
+	}{
+		{
+			name:            "bad env",
+			envDeployManual: "bad",
+			config:          Config{},
+			expectedErr:     errors.New("could not parse SOAJS_DEPLOY_MANUAL environment variable: strconv.ParseBool: parsing \"bad\": invalid syntax"),
+		},
+		{
+			name:            "post err",
+			envDeployManual: "true",
+			config:          Config{ServiceName: "test"},
+			expectedErr:     errors.New("could not call http://localhost/register: Post http://localhost/register"),
+		},
+	}
+	envDeployManual := os.Getenv(EnvDeployManual)
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			require.NoError(t, os.Setenv(EnvDeployManual, tc.envDeployManual))
+
+			addr := registryPath{
+				address: "localhost",
+			}
+			err := manualDeploy(tc.config, &addr)
+			assert.Contains(t, err.Error(), tc.expectedErr.Error())
+
+			require.NoError(t, os.Setenv(EnvDeployManual, envDeployManual))
+		})
+	}
+}
+
 func TestRegistry_Middleware(t *testing.T) {
 	tt := []struct {
 		name            string

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -75,6 +76,33 @@ func TestNewRegistry(t *testing.T) {
 func TestRegistry_Reload(t *testing.T) {
 	reg := Registry{}
 	assert.Error(t, reg.Reload())
+}
+
+func TestRegistry_autoReloadDuration(t *testing.T) {
+	tt := []struct {
+		name             string
+		reg              Registry
+		expectedDuration time.Duration
+	}{
+		{
+			name: "configured",
+			reg: Registry{
+				ServiceConfig: ServiceConfig{
+					Awareness: ServiceConfigIntervals{
+						AutoReloadRegistry: 3000}}},
+			expectedDuration: time.Second * 3,
+		},
+		{
+			name:             "empty",
+			reg:              Registry{},
+			expectedDuration: time.Second,
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expectedDuration, tc.reg.autoReloadDuration())
+		})
+	}
 }
 
 func TestRegistry_Database(t *testing.T) {

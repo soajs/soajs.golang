@@ -47,20 +47,27 @@ func (reg *Registry) Reload() error {
 
 // You can run this method in go routine.
 func (reg *Registry) autoReload(ctx context.Context) {
-	ticker := time.NewTicker(reg.ServiceConfig.Awareness.AutoReloadRegistry * time.Millisecond)
+	ticker := time.NewTicker(reg.autoReloadDuration())
 	for {
 		select {
 		case <-ticker.C:
 			err := reg.Reload()
 			if err == nil {
 				ticker.Stop()
-				ticker = time.NewTicker(reg.ServiceConfig.Awareness.AutoReloadRegistry * time.Millisecond)
+				ticker = time.NewTicker(reg.autoReloadDuration())
 			}
 		case <-ctx.Done():
 			ticker.Stop()
 			return
 		}
 	}
+}
+
+func (reg Registry) autoReloadDuration() time.Duration {
+	if reg.ServiceConfig.Awareness.AutoReloadRegistry > 0 {
+		return reg.ServiceConfig.Awareness.AutoReloadRegistry * time.Millisecond
+	}
+	return time.Second
 }
 
 // Database returns one database by name.
