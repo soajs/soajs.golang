@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"time"
 )
@@ -23,7 +25,12 @@ func NewRegistry(ctx context.Context, serviceName, envCode string, turnOnAutoRel
 	if err != nil {
 		return nil, fmt.Errorf("could not init registry from api gateway: %v", err)
 	}
-	defer res.Body.Close()
+	defer func(c io.Closer) {
+		err := c.Close()
+		if err != nil {
+			log.Printf("soajs library error: %v", err)
+		}
+	}(res.Body)
 	reg, err := registryResponse(res)
 	if err != nil {
 		return nil, err

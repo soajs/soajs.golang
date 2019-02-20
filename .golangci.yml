@@ -33,6 +33,7 @@ linters:
   - gocritic
   - govet
   - unused
+  - errcheck
   disable:
   - gas
 

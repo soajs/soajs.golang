@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -88,7 +90,12 @@ func manualDeploy(config Config, addr *registryPath) error {
 		if err != nil {
 			return fmt.Errorf("could not call %s: %v", addr.register(), err)
 		}
-		defer res.Body.Close()
+		defer func(c io.Closer) {
+			err := c.Close()
+			if err != nil {
+				log.Printf("soajs library error: %v", err)
+			}
+		}(res.Body)
 		_, err = registryResponse(res)
 		if err != nil {
 			return err
