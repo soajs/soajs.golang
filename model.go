@@ -3,48 +3,39 @@ package soajsgo
 import "time"
 
 type (
-	// Config represent service configuration from json file.
-	// see: https://soajsorg.atlassian.net/wiki/spaces/SOAJ/pages/61347270/Service
-	Config struct {
-		Name          string `json:"name"`
-		Group         string `json:"group"`
-		Type          string `json:"type"`
-		Port          int    `json:"port"`
-		Version       int    `json:"version"`
-		Prerequisites struct {
-			CPU    string `json:"cpu"`
-			Memory string `json:"memory"`
-		} `json:"prerequisites"`
-		ServiceName           string `json:"serviceName"`
-		ServiceGroup          string `json:"serviceGroup"`
-		ServiceIP             string `json:"IP"`
-		ServicePort           int    `json:"servicePort"`
-		ServiceVersion        int    `json:"serviceVersion"`
-		RequestTimeout        int    `json:"requestTimeout"`
-		RequestTimeoutRenewal int    `json:"requestTimeoutRenewal"`
-		Middleware            bool   `json:"mw"`
-		Swagger               bool   `json:"swagger"`
-		ExtKeyRequired        bool   `json:"extKeyRequired"`
-		Urac                  bool   `json:"urac"`
-		UracProfile           bool   `json:"urac_Profile"`
-		UracACL               bool   `json:"urac_ACL"`
-		ProvisionACL          bool   `json:"provision_ACL"`
-		Session               bool   `json:"session"`
-		Oauth                 bool   `json:"oauth"`
-		BodyParser            bool   `json:"bodyParser"`
-		MethodOverride        bool   `json:"methodOverride"`
-		CookieParser          bool   `json:"cookieParser"`
-		Logger                bool   `json:"logger"`
-		InputMask             bool   `json:"inputmask"`
-		Maintenance           struct {
-			Port struct {
-				Type string `json:"type"`
-			} `json:"port"`
-			Readiness string `json:"readiness"`
-		} `json:"maintenance"`
+	// registerConf represents the config object to send to soajs gateway as post data.
+	registerConf struct {
+		Name                  string      `json:"name"`
+		Type                  string      `json:"type"`
+		Group                 string      `json:"group"`
+		Version               string      `json:"version"`
+		Port                  int         `json:"port"`
+		RequestTimeout        int         `json:"requestTimeout"`
+		RequestTimeoutRenewal int         `json:"requestTimeoutRenewal"`
+		Middleware            bool        `json:"mw"`
+		Swagger               bool        `json:"swagger"`
+		ExtKeyRequired        bool        `json:"extKeyRequired"`
+		Urac                  bool        `json:"urac"`
+		UracProfile           bool        `json:"urac_Profile"`
+		UracACL               bool        `json:"urac_ACL"`
+		ProvisionACL          bool        `json:"provision_ACL"`
+		Oauth                 bool        `json:"oauth"`
+		IP                    string      `json:"ip"`
+		Maintenance           maintenance `json:"maintenance"`
 	}
-	// RegistryAPIResponse represents registry API response from soajs.
-	RegistryAPIResponse struct {
+	maintenance struct {
+		Port struct {
+			Type string `json:"type"`
+		} `json:"port"`
+		Readiness string `json:"readiness"`
+		Commands  []struct {
+			Label string `json:"label"`
+			Path  string `json:"path"`
+			Icon  string `json:"icon"`
+		} `json:"commands"`
+	}
+	// registryAPIResponse represents registry API response from soajs.
+	registryAPIResponse struct {
 		Result  bool  `json:"result"`
 		Ts      int64 `json:"ts"`
 		Service struct {
@@ -77,15 +68,15 @@ type (
 	}
 	// Database represents a Database structure with configuration fields.
 	Database struct {
-		Name             string                 `json:"name"`
-		Prefix           string                 `json:"prefix"`
-		Cluster          string                 `json:"cluster"`
-		Server           Host                   `json:"servers"`
-		Credentials      Credentials            `json:"credentials"`
-		Streaming        map[string]interface{} `json:"streaming"`
-		RegistryLocation RegistryLocation       `json:"registryLocation"`
-		URLParam         interface{}            `json:"URLParam"`
-		ExtraParam       interface{}            `json:"extraParam"`
+		Name             string           `json:"name"`
+		Prefix           string           `json:"prefix"`
+		Cluster          string           `json:"cluster"`
+		Server           Host             `json:"servers"`
+		Credentials      Credentials      `json:"credentials"`
+		Streaming        interface{}      `json:"streaming"`
+		RegistryLocation RegistryLocation `json:"registryLocation"`
+		URLParam         interface{}      `json:"URLParam"`
+		ExtraParam       interface{}      `json:"extraParam"`
 
 		// NOTE: session specific entries
 		Store       interface{} `json:"store,omitempty"`
@@ -222,11 +213,10 @@ type (
 		Device         string                 `json:"device"`
 		Geo            map[string]string      `json:"geo"`
 		Awareness      Host                   `json:"awareness"`
-		Controller     string                 `json:"controller"`
-		Reg            Registry               `json:"reg"`
+		Reg            *Registry              `json:"reg"`
 	}
-	// HeaderInfo represents header info structure.
-	HeaderInfo struct {
+	// headerInfo represents header info structure.
+	headerInfo struct {
 		Tenant      Tenant            `json:"tenant"`
 		Key         Key               `json:"key"`
 		Application Application       `json:"application"`
@@ -257,8 +247,8 @@ type (
 		Product          string                 `json:"product"`
 		Package          string                 `json:"package"`
 		AppID            string                 `json:"appId"`
-		ACL              map[string]interface{} `json:"acl"`
-		ACLAllEnv        map[string]interface{} `json:"acl_all_env"`
+		ACL              interface{}            `json:"acl"`
+		ACLAllEnv        interface{}            `json:"acl_all_env"`
 		PackageACL       map[string]interface{} `json:"package_acl"`
 		PackageACLAllEnv map[string]interface{} `json:"package_acl_all_env"`
 	}
@@ -269,19 +259,17 @@ type (
 	}
 	// Urac is the logged in user record in case urac is set to true.
 	Urac struct {
-		ID        string   `json:"_id"`
-		Username  string   `json:"username"`
-		FirstName string   `json:"firstName"`
-		LastName  string   `json:"lastName"`
-		Email     string   `json:"email"`
-		Groups    []string `json:"groups"`
-		Tenant    struct {
-			ID   string `json:"id"`
-			Code string `json:"code"`
-		} `json:"tenant"`
-		Profile   interface{} `json:"profile"`
-		ACL       interface{} `json:"acl"`
-		ACLAllEnv interface{} `json:"acl_AllEnv"`
+		ID          string      `json:"_id"`
+		Username    string      `json:"username"`
+		FirstName   string      `json:"firstName"`
+		LastName    string      `json:"lastName"`
+		Email       string      `json:"email"`
+		Groups      []string    `json:"groups"`
+		SocialLogin interface{} `json:"socialLogin"`
+		Tenant      Tenant      `json:"tenant"`
+		Profile     interface{} `json:"profile"`
+		ACL         interface{} `json:"acl"`
+		ACLAllEnv   interface{} `json:"acl_AllEnv"`
 	}
 	// Param represents Urac params.
 	Param struct {

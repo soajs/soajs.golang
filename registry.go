@@ -1,12 +1,11 @@
 package soajsgo
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -14,87 +13,109 @@ import (
 	"time"
 )
 
-const (
-	// EnvProfile is the environment variable name that contains location of the profile
-	// to use so that SOAJS can connect to the core database.
-	EnvProfile = "SOAJS_PROFILE"
-
-	// EnvSRVIP is optional environment variable used to specify which IP address to use
-	// if the machine has more than one active interface.
-	EnvSRVIP = "SOAJS_SRVIP"
-
-	// EnvSOLO is optional environment variable used to launch any service on top of SOAJS
-	// without the need of a database.
-	EnvSOLO = "SOAJS_SOLO"
-
-	// EnvSrvAutoRegisterHost is optional environment variable used in case a service should register itself or not.
-	EnvSrvAutoRegisterHost = "SOAJS_SRV_AUTOREGISTERHOST"
-
-	// EnvDaemonGRPConf is the environment variable name that contains the name of the daemon group to use;
-	// available for daemons ONLY.
-	EnvDaemonGRPConf = "SOAJS_DAEMON_GRP_CONF"
-
-	// EnvGCName is the environment variable name that contains mandatory variable if deploying a GCS service
-	// and contains the name of that GCS service.
-	EnvGCName = "SOAJS_GC_NAME"
-
-	// EnvDCVersion is the environment variable name that contains mandatory variable if deploying a GCS service
-	// and contains the version of that GCS service.
-	EnvDCVersion = "SOAJS_GC_VERSION"
-
-	// EnvGCMaxUploadLimit is optional variable if deploying a GCS service that specifies the maximum upload limit
-	// of file sizes to accept.
-	EnvGCMaxUploadLimit = "SOAJS_GC_MAX_UPLOAD_LIMIT"
-
-	// EnvRegistryAPIAddress is the environment variable name that contains the IP address and port of
-	// the controller service that runs in the same environment. The SOAJS middleware uses this variable to fetch
-	// the registry of this environment and supply it to your service.
-	EnvRegistryAPIAddress = "SOAJS_REGISTRY_API"
-)
-
-// NewRegistry creates and initialises new registry by service name and code.
+// New creates and initializes new registry by service name and code.
+// This function starts registry auto reload every AutoReloadRegistry if turnOnAutoReload set as true. You can break
+// this process using context.
 // see: https://soajsorg.atlassian.net/wiki/spaces/SOAJ/pages/61347270/Service
 // nolint: errcheck
-func NewRegistry(serviceName, envCode string) (*Registry, error) {
+func New(ctx context.Context, serviceName, envCode string, turnOnAutoReload bool) (*Registry, error) {
 	if serviceName == "" || envCode == "" {
 		return nil, errors.New("service name and env code are required")
 	}
-	addr := os.Getenv(EnvRegistryAPIAddress)
-	if addr == "" {
-		return nil, fmt.Errorf("could not find environment variable %s", EnvRegistryAPIAddress)
-	}
-	if index := strings.Index(addr, ":"); index == -1 {
-		return nil, fmt.Errorf("invalid format for %s. Got [%s], expected [hostname:port]: ", EnvRegistryAPIAddress, addr)
-	}
-	port := strings.Split(addr, ":")[1]
-	if _, err := strconv.Atoi(port); err != nil {
-		return nil, fmt.Errorf("port must be an integer, got %s", port)
-	}
-
-	reqURL := fmt.Sprintf("http://%s/getRegistry?env=%s&serviceName=%s", addr, envCode, serviceName)
-	res, err := http.Get(reqURL)
+	addr, err := registryAddress()
 	if err != nil {
-		return nil, fmt.Errorf("could not get registry from api gateway: %v", err)
+		return nil, fmt.Errorf("could not init registry api path: %v", err)
+	}
+	res, err := http.Get(addr.getRegistry(serviceName, envCode))
+	if err != nil {
+		return nil, fmt.Errorf("could not init registry from api gateway: %v", err)
 	}
 	defer res.Body.Close()
-	if res.StatusCode < 200 || res.StatusCode > 299 {
-		b, _ := ioutil.ReadAll(res.Body)
-		return nil, fmt.Errorf("non 2xx status code: %d %v", res.StatusCode, b)
-	}
-	var temp RegistryAPIResponse
-	err = json.NewDecoder(res.Body).Decode(&temp)
+	reg, err := registryResponse(res)
 	if err != nil {
-		return nil, fmt.Errorf("unable to convert registry response: %v", err)
+		return nil, err
 	}
-	if len(temp.Errors.Details) > 0 {
-		return nil, fmt.Errorf("bad response: [%d] %s", temp.Errors.Details[0].Code, temp.Errors.Details[0].Message)
+	if turnOnAutoReload {
+		go reg.autoReload(ctx)
 	}
-	return &temp.Registry, nil
+	return reg, nil
 }
 
-// Reload does the same that NewRegistry does, It reloads registry from soajs.
+// NewFromConfig creates and initializes new registry by the configuration.
+// This function starts registry auto reload every AutoReloadRegistry. You can break this process using context.
+func NewFromConfig(ctx context.Context, config Config) (*Registry, error) {
+	addr, err := registryAddress()
+	if err != nil {
+		return nil, fmt.Errorf("could not init registry api path: %v", err)
+	}
+	soajsEnv := strings.ToLower(os.Getenv(EnvSoajsEnv))
+	if soajsEnv == "" {
+		return nil, fmt.Errorf("could not find environment variable %s", EnvSoajsEnv)
+	}
+	if err := config.Validate(); err != nil {
+		return nil, err
+	}
+	reg, err := New(ctx, config.ServiceName, soajsEnv, true)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch registry: %v", err)
+	}
+	err = manualDeploy(config, addr)
+	if err != nil {
+		return nil, err
+	}
+	return reg, nil
+}
+
+// nolint: errcheck
+func manualDeploy(config Config, addr *registryPath) error {
+	manualDeploySrt := os.Getenv(EnvDeployManual)
+	manualDeploy, err := strconv.ParseBool(manualDeploySrt)
+	if err != nil {
+		return fmt.Errorf("could not parse %s environment variable: %v", EnvDeployManual, err)
+	}
+	if manualDeploy {
+		if config.ServiceIP == "" {
+			config.ServiceIP = "127.0.0.1"
+		}
+		regConf := registerConf{
+			Name:                  config.ServiceName,
+			Type:                  config.Type,
+			Middleware:            true,
+			Group:                 config.ServiceGroup,
+			Port:                  config.ServicePort,
+			Swagger:               config.Swagger,
+			RequestTimeout:        config.RequestTimeout,
+			RequestTimeoutRenewal: config.RequestTimeoutRenewal,
+			Version:               config.ServiceVersion,
+			ExtKeyRequired:        config.ExtKeyRequired,
+			Urac:                  config.Urac,
+			UracProfile:           config.UracProfile,
+			UracACL:               config.UracACL,
+			ProvisionACL:          config.ProvisionACL,
+			Oauth:                 config.Oauth,
+			IP:                    config.ServiceIP,
+			Maintenance:           config.Maintenance,
+		}
+		d, err := json.Marshal(regConf)
+		if err != nil {
+			return fmt.Errorf("could not marshal manual deploy auto register config: %v", err)
+		}
+		res, err := http.Post(addr.register(), "application/json", bytes.NewBuffer(d))
+		if err != nil {
+			return fmt.Errorf("could not call %s: %v", addr.register(), err)
+		}
+		defer res.Body.Close()
+		_, err = registryResponse(res)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Reload does the same that New does, It reloads registry from soajs.
 func (reg *Registry) Reload() error {
-	r, err := NewRegistry(reg.Name, reg.Environment)
+	r, err := New(context.Background(), reg.Name, reg.Environment, false)
 	if err != nil {
 		return err
 	}
@@ -105,21 +126,27 @@ func (reg *Registry) Reload() error {
 
 // You can run this method in go routine.
 func (reg *Registry) autoReload(ctx context.Context) {
-	ticker := time.NewTicker(reg.ServiceConfig.Awareness.AutoReloadRegistry * time.Millisecond)
+	ticker := time.NewTicker(reg.autoReloadDuration())
 	for {
 		select {
 		case <-ticker.C:
 			err := reg.Reload()
-			if err != nil {
-				// TODO: it is not correct to print some logs in library.
-				log.Printf("could not reload registry data: %v", err)
-			} else {
-				ticker = time.NewTicker(reg.ServiceConfig.Awareness.AutoReloadRegistry * time.Millisecond)
+			if err == nil {
+				ticker.Stop()
+				ticker = time.NewTicker(reg.autoReloadDuration())
 			}
 		case <-ctx.Done():
+			ticker.Stop()
 			return
 		}
 	}
+}
+
+func (reg Registry) autoReloadDuration() time.Duration {
+	if reg.ServiceConfig.Awareness.AutoReloadRegistry > 0 {
+		return reg.ServiceConfig.Awareness.AutoReloadRegistry * time.Millisecond
+	}
+	return time.Second
 }
 
 // Database returns one database by name.

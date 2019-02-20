@@ -1,57 +1,13 @@
 package soajsgo
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
-
-func TestInitMiddleware(t *testing.T) {
-	tt := []struct {
-		name        string
-		config      Config
-		envRegAPI   string
-		envEnv      string
-		expectedErr error
-	}{
-		{
-			name:        "no envs",
-			config:      Config{},
-			envRegAPI:   "",
-			envEnv:      "",
-			expectedErr: nil,
-		},
-		{
-			name:        "registry error",
-			config:      Config{},
-			envRegAPI:   "api",
-			envEnv:      "env",
-			expectedErr: errors.New("could not create new registry: service name and env code are required"),
-		},
-	}
-	lastEnvRegAPI := os.Getenv(EnvRegistryAPIAddress)
-	lastEnvEnv := os.Getenv(EnvEnv)
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			require.NoError(t, os.Setenv(EnvRegistryAPIAddress, tc.envRegAPI))
-			require.NoError(t, os.Setenv(EnvEnv, tc.envEnv))
-
-			ctx, cancel := context.WithCancel(context.Background())
-			_, err := InitMiddleware(ctx, tc.config)
-			cancel()
-			assert.Equal(t, tc.expectedErr, err)
-
-			assert.NoError(t, os.Setenv(EnvRegistryAPIAddress, lastEnvRegAPI))
-			assert.NoError(t, os.Setenv(EnvEnv, lastEnvEnv))
-		})
-	}
-}
 
 func TestRegistry_Middleware(t *testing.T) {
 	tt := []struct {
@@ -76,7 +32,7 @@ func TestRegistry_Middleware(t *testing.T) {
 			name:            "all ok",
 			headerInfo:      `{"device":"iPhone"}`,
 			reg:             Registry{Name: "ok"},
-			expectedSoaData: ContextData{Device: "iPhone", Reg: Registry{Name: "ok"}},
+			expectedSoaData: ContextData{Device: "iPhone", Reg: &Registry{Name: "ok"}},
 		},
 	}
 	for _, tc := range tt {
@@ -103,7 +59,7 @@ func TestHeaderData(t *testing.T) {
 	tt := []struct {
 		name         string
 		data         string
-		expectedInfo *HeaderInfo
+		expectedInfo *headerInfo
 		expectedErr  error
 	}{
 		{
@@ -121,7 +77,7 @@ func TestHeaderData(t *testing.T) {
 		{
 			name:         "all ok",
 			data:         `{"device":"iPhone"}`,
-			expectedInfo: &HeaderInfo{Device: "iPhone"},
+			expectedInfo: &headerInfo{Device: "iPhone"},
 			expectedErr:  nil,
 		},
 	}
