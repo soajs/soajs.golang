@@ -131,7 +131,7 @@ func TestRegistry_Middleware(t *testing.T) {
 			name:            "all ok",
 			headerInfo:      `{"device":"iPhone"}`,
 			reg:             Registry{Name: "ok"},
-			expectedSoaData: ContextData{Device: "iPhone", Reg: Registry{Name: "ok"}},
+			expectedSoaData: ContextData{Device: "iPhone", Reg: &Registry{Name: "ok"}},
 		},
 	}
 	for _, tc := range tt {

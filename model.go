@@ -213,7 +213,7 @@ type (
 		Device         string                 `json:"device"`
 		Geo            map[string]string      `json:"geo"`
 		Awareness      Host                   `json:"awareness"`
-		Reg            Registry               `json:"reg"`
+		Reg            *Registry              `json:"reg"`
 	}
 	// headerInfo represents header info structure.
 	headerInfo struct {

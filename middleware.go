@@ -105,7 +105,7 @@ func manualDeploy(config Config, addr *registryPath) error {
 }
 
 // Middleware is http middleware that gets triggered per request.
-func (reg Registry) Middleware(next http.Handler) http.Handler {
+func (reg *Registry) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		d, err := headerData(r)
 		if err != nil {
