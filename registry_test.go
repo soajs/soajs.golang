@@ -191,7 +191,7 @@ func TestRegistry_autoReloadDuration(t *testing.T) {
 		{
 			name:             "empty",
 			reg:              Registry{},
-			expectedDuration: time.Second,
+			expectedDuration: time.Hour,
 		},
 	}
 	for _, tc := range tt {
