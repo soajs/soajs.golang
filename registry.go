@@ -146,7 +146,7 @@ func (reg Registry) autoReloadDuration() time.Duration {
 	if reg.ServiceConfig.Awareness.AutoReloadRegistry > 0 {
 		return reg.ServiceConfig.Awareness.AutoReloadRegistry * time.Millisecond
 	}
-	return time.Second
+	return time.Hour
 }
 
 // Database returns one database by name.

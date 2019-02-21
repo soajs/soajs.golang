@@ -71,7 +71,7 @@ type (
 		Name             string           `json:"name"`
 		Prefix           string           `json:"prefix"`
 		Cluster          string           `json:"cluster"`
-		Server           Host             `json:"servers"`
+		Server           []Host           `json:"servers"`
 		Credentials      Credentials      `json:"credentials"`
 		Streaming        interface{}      `json:"streaming"`
 		RegistryLocation RegistryLocation `json:"registryLocation"`
@@ -114,7 +114,7 @@ type (
 	ServiceConfigIntervals struct {
 		CacheTTL            int           `json:"cacheTTL"`
 		HealthCheckInterval int           `json:"healthCheckInterval"`
-		AutoReloadRegistry  time.Duration `json:"autoReloadRegistry"`
+		AutoReloadRegistry  time.Duration `json:"autoRelaodRegistry"`
 		MaxLogCount         int           `json:"maxLogCount"`
 		AutoRegisterService bool          `json:"autoRegisterService"`
 	}
@@ -201,7 +201,7 @@ type (
 		RequestTimeout        int    `json:"requestTimeout"`
 		RequestTimeoutRenewal int    `json:"requestTimeoutRenewal"`
 		MaxPoolSize           int    `json:"maxPoolSize"`
-		Version               int    `json:"version"`
+		Version               string `json:"version"`
 		Authorization         bool   `json:"authorization"`
 		ExtKeyRequired        bool   `json:"extKeyRequired"`
 	}
