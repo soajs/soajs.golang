@@ -1,13 +1,11 @@
 package soajsgo
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -24,74 +22,8 @@ const (
 	SoajsKey = key(1)
 )
 
-// InitMiddleware returns http soajs middleware with registry inside.
-// This function starts registry auto reload every AutoReloadRegistry. You can break this process using context.
-// nolint: errcheck
-func InitMiddleware(ctx context.Context, config Config) (func(http.Handler) http.Handler, error) {
-	addr, err := registryAddress()
-	if err != nil {
-		return nil, fmt.Errorf("could not init registry api path: %v", err)
-	}
-	soajsEnv := strings.ToLower(os.Getenv(EnvSoajsEnv))
-	if soajsEnv == "" {
-		return nil, fmt.Errorf("could not find environment variable %s", EnvSoajsEnv)
-	}
-	if err := config.Validate(); err != nil {
-		return nil, err
-	}
-	reg, err := NewRegistry(ctx, config.ServiceName, soajsEnv, true)
-	if err != nil {
-		return nil, fmt.Errorf("could not fetch registry: %v", err)
-	}
-
-	manualDeploySrt := os.Getenv(EnvDeployManual)
-	manualDeploy, err := strconv.ParseBool(manualDeploySrt)
-	if err != nil {
-		return nil, fmt.Errorf("could not parse %s envaronment variable: %v", EnvDeployManual, err)
-	}
-	if manualDeploy {
-		if config.ServiceIP == "" {
-			config.ServiceIP = "127.0.0.1"
-		}
-		regConf := registerConf{
-			Name:                  config.ServiceName,
-			Type:                  config.Type,
-			Middleware:            true,
-			Group:                 config.ServiceGroup,
-			Port:                  config.ServicePort,
-			Swagger:               config.Swagger,
-			RequestTimeout:        config.RequestTimeout,
-			RequestTimeoutRenewal: config.RequestTimeoutRenewal,
-			Version:               config.ServiceVersion,
-			ExtKeyRequired:        config.ExtKeyRequired,
-			Urac:                  config.Urac,
-			UracProfile:           config.UracProfile,
-			UracACL:               config.UracACL,
-			ProvisionACL:          config.ProvisionACL,
-			Oauth:                 config.Oauth,
-			IP:                    config.ServiceIP,
-			Maintenance:           config.Maintenance,
-		}
-		d, err := json.Marshal(regConf)
-		if err != nil {
-			return nil, fmt.Errorf("could not marshal manual deploy auto register config: %v", err)
-		}
-		res, err := http.Post(addr.register(), "application/json", bytes.NewBuffer(d))
-		if err != nil {
-			return nil, fmt.Errorf("could not call %s: %v", addr.register(), err)
-		}
-		defer res.Body.Close()
-		_, err = registryResponse(res)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return reg.Middleware, nil
-}
-
 // Middleware is http middleware that gets triggered per request.
-func (reg Registry) Middleware(next http.Handler) http.Handler {
+func (reg *Registry) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		d, err := headerData(r)
 		if err != nil {
