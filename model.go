@@ -1,6 +1,8 @@
 package soajsgo
 
-import "time"
+import (
+	"time"
+)
 
 type (
 	// registerConf represents the config object to send to soajs gateway as post data.
@@ -65,6 +67,8 @@ type (
 		Custom        CustomRegistries   `json:"custom"`
 		Resources     Resources          `json:"resources"`
 		Services      map[string]Service `json:"services"`
+
+		onAutoReload bool
 	}
 	// Database represents a Database structure with configuration fields.
 	Database struct {
@@ -115,8 +119,9 @@ type (
 		CacheTTL            int           `json:"cacheTTL"`
 		HealthCheckInterval int           `json:"healthCheckInterval"`
 		AutoReloadRegistry  time.Duration `json:"autoRelaodRegistry"`
-		MaxLogCount         int           `json:"maxLogCount"`
-		AutoRegisterService bool          `json:"autoRegisterService"`
+		autoReloadRegistry  time.Duration
+		MaxLogCount         int  `json:"maxLogCount"`
+		AutoRegisterService bool `json:"autoRegisterService"`
 	}
 	// Agent contains topology direction.
 	Agent struct {
