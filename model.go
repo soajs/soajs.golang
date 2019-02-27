@@ -119,9 +119,8 @@ type (
 		CacheTTL            int           `json:"cacheTTL"`
 		HealthCheckInterval int           `json:"healthCheckInterval"`
 		AutoReloadRegistry  time.Duration `json:"autoRelaodRegistry"`
-		autoReloadRegistry  time.Duration
-		MaxLogCount         int  `json:"maxLogCount"`
-		AutoRegisterService bool `json:"autoRegisterService"`
+		MaxLogCount         int           `json:"maxLogCount"`
+		AutoRegisterService bool          `json:"autoRegisterService"`
 	}
 	// Agent contains topology direction.
 	Agent struct {
