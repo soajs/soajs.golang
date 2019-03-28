@@ -84,7 +84,7 @@ func (a Host) Path(args ...string) string {
 		version = args[1]
 	}
 	host := fmt.Sprintf("%s:%d/", a.Host, a.Port)
-	if strings.EqualFold(serviceName, "controller") {
+	if !strings.EqualFold(serviceName, "controller") {
 		host = fmt.Sprintf("%s%s/", host, serviceName)
 		if _, err := strconv.Atoi(version); err == nil {
 			host = fmt.Sprintf("%sv%s/", host, version)
