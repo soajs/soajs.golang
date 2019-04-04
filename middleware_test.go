@@ -107,7 +107,7 @@ func TestHost_Path(t *testing.T) {
 				Port: 8080,
 			},
 			args:         []string{"test"},
-			expectedPath: "localhost:8080/test",
+			expectedPath: "localhost:8080/test/",
 		},
 		{
 			name: "2",
