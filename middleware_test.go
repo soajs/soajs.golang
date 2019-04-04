@@ -107,7 +107,7 @@ func TestHost_Path(t *testing.T) {
 				Port: 8080,
 			},
 			args:         []string{"test"},
-			expectedPath: "localhost:8080/",
+			expectedPath: "localhost:8080/test",
 		},
 		{
 			name: "2",
@@ -115,8 +115,8 @@ func TestHost_Path(t *testing.T) {
 				Host: "localhost",
 				Port: 8080,
 			},
-			args:         []string{"CONTROLLER", "v"},
-			expectedPath: "localhost:8080/CONTROLLER/",
+			args:         []string{"test", "v"},
+			expectedPath: "localhost:8080/test/",
 		},
 		{
 			name: "3",
@@ -124,8 +124,17 @@ func TestHost_Path(t *testing.T) {
 				Host: "localhost",
 				Port: 8080,
 			},
-			args:         []string{"CONTROLLER", "1", "-"},
-			expectedPath: "localhost:8080/CONTROLLER/v1/",
+			args:         []string{"test", "1", "-"},
+			expectedPath: "localhost:8080/test/v1/",
+		},
+		{
+			name: "4",
+			host: Host{
+				Host: "localhost",
+				Port: 8080,
+			},
+			args:         []string{"controller", "1", "-"},
+			expectedPath: "localhost:8080/",
 		},
 	}
 	for _, tc := range tt {
