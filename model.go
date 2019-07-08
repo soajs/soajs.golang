@@ -65,6 +65,7 @@ type (
 		Custom        CustomRegistries   `json:"custom"`
 		Resources     Resources          `json:"resources"`
 		Services      map[string]Service `json:"services"`
+		Awareness     Host               `json:"awareness"`
 	}
 	// Database represents a Database structure with configuration fields.
 	Database struct {
