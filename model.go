@@ -243,8 +243,8 @@ type (
 
 	// TenantMain represents Tenant main.
 	TenantMain struct {
-		ID          string      `json:"id"`
-		Code        string      `json:"code"`
+		ID   string `json:"id"`
+		Code string `json:"code"`
 	}
 
 	// Key represents the key that is making the call to the API.
