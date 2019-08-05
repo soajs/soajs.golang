@@ -25,6 +25,7 @@ type (
 		ExtKeyRequired        bool        `json:"extKeyRequired"`
 		Urac                  bool        `json:"urac"`
 		UracProfile           bool        `json:"urac_Profile"`
+		TenantProfile         bool        `json:"tenant_Profile"`
 		UracACL               bool        `json:"urac_ACL"`
 		ProvisionACL          bool        `json:"provision_ACL"`
 		Oauth                 bool        `json:"oauth"`

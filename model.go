@@ -17,6 +17,7 @@ type (
 		ExtKeyRequired        bool        `json:"extKeyRequired"`
 		Urac                  bool        `json:"urac"`
 		UracProfile           bool        `json:"urac_Profile"`
+		TenantProfile         bool        `json:"tenant_Profile"`
 		UracACL               bool        `json:"urac_ACL"`
 		ProvisionACL          bool        `json:"provision_ACL"`
 		Oauth                 bool        `json:"oauth"`
@@ -236,7 +237,16 @@ type (
 		Key         Key         `json:"key"`
 		Roaming     interface{} `json:"roaming,omitempty"` // TODO: implement struct
 		Application Application `json:"application,omitempty"`
+		Profile     interface{} `json:"profile"`
+		Main        TenantMain  `json:"main"`
 	}
+
+	// TenantMain represents Tenant main.
+	TenantMain struct {
+		ID          string      `json:"id"`
+		Code        string      `json:"code"`
+	}
+
 	// Key represents the key that is making the call to the API.
 	Key struct {
 		Config map[string]interface{} `json:"config"`

@@ -90,6 +90,7 @@ func manualDeploy(config Config, addr *registryPath) error {
 			ExtKeyRequired:        config.ExtKeyRequired,
 			Urac:                  config.Urac,
 			UracProfile:           config.UracProfile,
+			TenantProfile:         config.TenantProfile,
 			UracACL:               config.UracACL,
 			ProvisionACL:          config.ProvisionACL,
 			Oauth:                 config.Oauth,
