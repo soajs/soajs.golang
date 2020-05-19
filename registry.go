@@ -16,9 +16,8 @@ import (
 // New creates and initializes new registry by service name and code.
 // This function starts registry auto reload every AutoReloadRegistry if turnOnAutoReload set as true. You can break
 // this process using context.
-// see: https://soajsorg.atlassian.net/wiki/spaces/SOAJ/pages/61347270/Service
 // nolint: errcheck
-func New(ctx context.Context, serviceName, envCode string, turnOnAutoReload bool) (*Registry, error) {
+func New(ctx context.Context, serviceName, envCode, serviceType string, turnOnAutoReload bool) (*Registry, error) {
 	if serviceName == "" || envCode == "" {
 		return nil, errors.New("service name and env code are required")
 	}
@@ -26,7 +25,7 @@ func New(ctx context.Context, serviceName, envCode string, turnOnAutoReload bool
 	if err != nil {
 		return nil, fmt.Errorf("could not init registry api path: %v", err)
 	}
-	res, err := http.Get(addr.getRegistry(serviceName, envCode))
+	res, err := http.Get(addr.getRegistry(serviceName, envCode, serviceType))
 	if err != nil {
 		return nil, fmt.Errorf("could not init registry from api gateway: %v", err)
 	}
@@ -35,6 +34,7 @@ func New(ctx context.Context, serviceName, envCode string, turnOnAutoReload bool
 	if err != nil {
 		return nil, err
 	}
+	reg.ServiceType = serviceType
 	if turnOnAutoReload {
 		go reg.autoReload(ctx)
 	}
@@ -55,7 +55,7 @@ func NewFromConfig(ctx context.Context, config Config) (*Registry, error) {
 	if err := config.Validate(); err != nil {
 		return nil, err
 	}
-	reg, err := New(ctx, config.ServiceName, soajsEnv, true)
+	reg, err := New(ctx, config.ServiceName, soajsEnv, config.Type, true)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch registry: %v", err)
 	}
@@ -67,7 +67,7 @@ func NewFromConfig(ctx context.Context, config Config) (*Registry, error) {
 }
 
 // nolint: errcheck
-func manualDeploy(config Config, addr *registryPath) error {
+func manualDeploy(config Config, addr registryPath) error {
 	manualDeploySrt := os.Getenv(EnvDeployManual)
 	manualDeploy, err := strconv.ParseBool(manualDeploySrt)
 	if err != nil {
@@ -79,23 +79,27 @@ func manualDeploy(config Config, addr *registryPath) error {
 		}
 		regConf := registerConf{
 			Name:                  config.ServiceName,
-			Type:                  config.Type,
-			Middleware:            true,
 			Group:                 config.ServiceGroup,
 			Port:                  config.ServicePort,
-			Swagger:               config.Swagger,
-			RequestTimeout:        config.RequestTimeout,
-			RequestTimeoutRenewal: config.RequestTimeoutRenewal,
+			IP:                    config.ServiceIP,
+			Type:                  config.Type,
 			Version:               config.ServiceVersion,
-			ExtKeyRequired:        config.ExtKeyRequired,
+			SubType:               config.SubType,
+			Description:           config.Description,
+			Oauth:                 config.Oauth,
 			Urac:                  config.Urac,
 			UracProfile:           config.UracProfile,
-			TenantProfile:         config.TenantProfile,
 			UracACL:               config.UracACL,
+			UracConfig:            config.UracConfig,
+			UracGroupConfig:       config.UracGroupConfig,
+			TenantProfile:         config.TenantProfile,
 			ProvisionACL:          config.ProvisionACL,
-			Oauth:                 config.Oauth,
-			IP:                    config.ServiceIP,
+			RequestTimeout:        config.RequestTimeout,
+			RequestTimeoutRenewal: config.RequestTimeoutRenewal,
+			Middleware:            true,
+			ExtKeyRequired:        config.ExtKeyRequired,
 			Maintenance:           config.Maintenance,
+			InterConnect:          config.InterConnect,
 		}
 		d, err := json.Marshal(regConf)
 		if err != nil {
@@ -116,7 +120,7 @@ func manualDeploy(config Config, addr *registryPath) error {
 
 // Reload does the same that New does, It reloads registry from soajs.
 func (reg *Registry) Reload() error {
-	r, err := New(context.Background(), reg.Name, reg.Environment, false)
+	r, err := New(context.Background(), reg.Name, reg.Environment, reg.ServiceType, false)
 	if err != nil {
 		return err
 	}

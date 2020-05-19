@@ -1,46 +1,70 @@
 package soajsgo
 
-import "time"
+import (
+	"time"
+)
 
 type (
 	// registerConf represents the config object to send to soajs gateway as post data.
 	registerConf struct {
-		Name                  string      `json:"name"`
-		Type                  string      `json:"type"`
-		Group                 string      `json:"group"`
-		Version               string      `json:"version"`
-		Port                  int         `json:"port"`
-		RequestTimeout        int         `json:"requestTimeout"`
-		RequestTimeoutRenewal int         `json:"requestTimeoutRenewal"`
-		Middleware            bool        `json:"mw"`
-		Swagger               bool        `json:"swagger"`
-		ExtKeyRequired        bool        `json:"extKeyRequired"`
-		Urac                  bool        `json:"urac"`
-		UracProfile           bool        `json:"urac_Profile"`
-		TenantProfile         bool        `json:"tenant_Profile"`
-		UracACL               bool        `json:"urac_ACL"`
-		ProvisionACL          bool        `json:"provision_ACL"`
-		Oauth                 bool        `json:"oauth"`
-		IP                    string      `json:"ip"`
-		Maintenance           maintenance `json:"maintenance"`
+		Name                  string       `json:"name"`
+		Group                 string       `json:"group"`
+		Port                  int          `json:"port"`
+		IP                    string       `json:"ip"`
+		Type                  string       `json:"type"`
+		Version               string       `json:"version"`
+		SubType               string       `json:"subType"`
+		Description           string       `json:"description"`
+		Oauth                 bool         `json:"oauth"`
+		Urac                  bool         `json:"urac"`
+		UracProfile           bool         `json:"urac_Profile"`
+		UracACL               bool         `json:"urac_ACL"`
+		UracConfig            bool         `json:"urac_Config"`
+		UracGroupConfig       bool         `json:"urac_GroupConfig"`
+		TenantProfile         bool         `json:"tenant_Profile"`
+		ProvisionACL          bool         `json:"provision_ACL"`
+		ExtKeyRequired        bool         `json:"extKeyRequired"`
+		RequestTimeout        int          `json:"requestTimeout"`
+		RequestTimeoutRenewal int          `json:"requestTimeoutRenewal"`
+		Middleware            bool         `json:"mw"`
+		Maintenance           maintenance  `json:"maintenance"`
+		InterConnect          interconnect `json:"interConnect"`
 	}
 	maintenance struct {
-		Port struct {
-			Type string `json:"type"`
-		} `json:"port"`
-		Readiness string `json:"readiness"`
+		Port      maintenancePort `json:"port"`
+		Readiness string          `json:"readiness"`
 		Commands  []struct {
 			Label string `json:"label"`
 			Path  string `json:"path"`
 			Icon  string `json:"icon"`
 		} `json:"commands"`
 	}
+	maintenancePort struct {
+		Type  string `json:"type"`
+		Value int    `json:"value"`
+	}
+	interconnect []struct {
+		Name    string `json:"name"`
+		Version string `json:"version"`
+	}
+
+	//Awareness connect response
+	Connect struct {
+		Host    string `json:"host"`
+		Headers struct {
+			Key            string      `json:"key"`
+			AccessToken    string      `json:"access_token"`
+			SoajsInjectobj interface{} `json:"soajsinjectobj"`
+		}
+	}
+
 	// registryAPIResponse represents registry API response from soajs.
 	registryAPIResponse struct {
 		Result  bool  `json:"result"`
 		Ts      int64 `json:"ts"`
 		Service struct {
 			ServiceName string `json:"service"`
+			Version     string `json:"version"`
 			Type        string `json:"type"`
 			Route       string `json:"route"`
 		} `json:"service"`
@@ -55,25 +79,23 @@ type (
 	}
 	// Registry represents registry structure.
 	Registry struct {
-		TimeLoaded  int64  `json:"timeLoaded"`
-		Name        string `json:"name"`
-		Environment string `json:"environment"`
-
+		TimeLoaded    int64  `json:"timeLoaded"`
+		Name          string `json:"name"`
+		Environment   string `json:"environment"`
+		ServiceType   string
 		CoreDBs       map[string]Database `json:"coreDB"`
 		TenantMetaDBs map[string]Database `json:"tenantMetaDB"`
-
-		ServiceConfig ServiceConfig      `json:"serviceConfig"`
-		Custom        CustomRegistries   `json:"custom"`
-		Resources     Resources          `json:"resources"`
-		Services      map[string]Service `json:"services"`
-		Awareness     Host               `json:"awareness"`
+		ServiceConfig ServiceConfig       `json:"serviceConfig"`
+		Custom        CustomRegistries    `json:"custom"`
+		Resources     Resources           `json:"resources"`
+		Services      map[string]Service  `json:"services"`
 	}
 	// Database represents a Database structure with configuration fields.
 	Database struct {
 		Name             string           `json:"name"`
 		Prefix           string           `json:"prefix"`
 		Cluster          string           `json:"cluster"`
-		Server           []Host           `json:"servers"`
+		Server           []DBHost         `json:"servers"`
 		Credentials      Credentials      `json:"credentials"`
 		Streaming        interface{}      `json:"streaming"`
 		RegistryLocation RegistryLocation `json:"registryLocation"`
@@ -86,8 +108,8 @@ type (
 		Stringify   bool        `json:"stringify,omitempty"`
 		ExpireAfter int         `json:"expireAfter,omitempty"`
 	}
-	// Host represents host information.
-	Host struct {
+	// DBHost represents host information.
+	DBHost struct {
 		Host string `json:"host"`
 		Port int    `json:"port"`
 	}
@@ -198,15 +220,10 @@ type (
 	}
 	// Service represents service structure.
 	Service struct {
-		Group                 string `json:"group"`
-		Port                  int    `json:"port"`
-		RequestTimeout        int    `json:"requestTimeout"`
-		RequestTimeoutRenewal int    `json:"requestTimeoutRenewal"`
-		MaxPoolSize           int    `json:"maxPoolSize"`
-		Version               string `json:"version"`
-		Authorization         bool   `json:"authorization"`
-		ExtKeyRequired        bool   `json:"extKeyRequired"`
+		Group string `json:"group"`
+		Port  int    `json:"port"`
 	}
+
 	// ContextData represents http context data information.
 	ContextData struct {
 		Tenant         Tenant                 `json:"tenant"`
@@ -240,13 +257,23 @@ type (
 		Profile     interface{} `json:"profile"`
 		Main        TenantMain  `json:"main"`
 	}
-
+	Host struct {
+		Host         string             `json:"host"`
+		Port         int                `json:"port"`
+		InterConnect headerInterconnect `json:"interConnect"`
+	}
+	headerInterconnect []struct {
+		Name    string `json:"name"`
+		Version string `json:"version"`
+		Host    string `json:"host"`
+		Port    int    `json:"port"`
+		Latest  string `json:"latest"`
+	}
 	// TenantMain represents Tenant main.
 	TenantMain struct {
 		ID   string `json:"id"`
 		Code string `json:"code"`
 	}
-
 	// Key represents the key that is making the call to the API.
 	Key struct {
 		Config map[string]interface{} `json:"config"`

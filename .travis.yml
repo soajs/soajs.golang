@@ -10,7 +10,7 @@ os:
 - linux
 
 go:
-- 1.11.5
+- 1.13.7
 
 git:
   depth: 1

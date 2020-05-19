@@ -3,7 +3,6 @@ package soajsgo
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -30,10 +29,6 @@ func (reg *Registry) Middleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		if d == nil {
-			next.ServeHTTP(w, r)
-			return
-		}
 		out := ContextData{
 			Tenant:         d.Tenant,
 			Urac:           d.Urac,
@@ -56,13 +51,10 @@ func (reg *Registry) Middleware(next http.Handler) http.Handler {
 }
 
 func headerData(r *http.Request) (*headerInfo, error) {
-	headerData := r.Header.Get(headerDataName)
-	if headerData == "" {
-		return nil, nil
-	}
-	d := new(headerInfo)
-	if err := json.Unmarshal([]byte(headerData), d); err != nil {
-		return nil, errors.New("unable to parse SOAJS header")
+	info := strings.NewReader(r.Header.Get(headerDataName))
+	var d *headerInfo
+	if err := json.NewDecoder(info).Decode(&d); err != nil {
+		return nil, fmt.Errorf("unable to parse SOAJS header: %v", err)
 	}
 	return d, nil
 }
@@ -71,24 +63,70 @@ func headerData(r *http.Request) (*headerInfo, error) {
 func (a Host) Path(args ...string) string {
 	var serviceName, version string
 	switch len(args) {
-	// controller
-	case 1:
+	case 1: // controller
 		serviceName = args[0]
-		// controller, 1
-	case 2:
-		serviceName = args[0]
-		version = args[1]
-		// controller, 1, dash [dash is ignored]
-	case 3:
+	case 2, 3: // controller, 1, dash [dash is ignored]
 		serviceName = args[0]
 		version = args[1]
 	}
 	host := fmt.Sprintf("%s:%d/", a.Host, a.Port)
-	if !strings.EqualFold(serviceName, "controller") {
+	if strings.EqualFold(serviceName, "controller") {
 		host = fmt.Sprintf("%s%s/", host, serviceName)
 		if _, err := strconv.Atoi(version); err == nil {
 			host = fmt.Sprintf("%sv%s/", host, version)
 		}
 	}
 	return host
+}
+
+func (c ContextData) Connect(args ...string) Connect {
+	var connectResponse Connect
+	var serviceName, version string
+	switch len(args) {
+	case 1: // controller
+		serviceName = args[0]
+	case 2, 3: // controller, 1, dash [dash is ignored]
+		serviceName = args[0]
+		version = args[1]
+	}
+	if c.Awareness.InterConnect != nil {
+		for i := 0; i < len(c.Awareness.InterConnect); i++ {
+			if serviceName == c.Awareness.InterConnect[i].Name {
+				if version == "" && c.Awareness.InterConnect[i].Version == c.Awareness.InterConnect[i].Latest {
+					connectResponse.Host = fmt.Sprintf("%s:%d", c.Awareness.InterConnect[i].Host, c.Awareness.InterConnect[i].Port)
+					break
+				} else {
+					if version == c.Awareness.InterConnect[i].Version {
+						connectResponse.Host = fmt.Sprintf("%s:%d", c.Awareness.InterConnect[i].Host, c.Awareness.InterConnect[i].Port)
+						break
+					}
+				}
+			}
+		}
+		if connectResponse.Host != "" {
+			connectResponse.Headers.SoajsInjectobj = headerInfo{
+				Tenant: c.Tenant,
+				Key: Key{
+					IKey:   c.Tenant.Key.IKey,
+					EKey:   c.Tenant.Key.EKey,
+					Config: c.ServicesConfig,
+				},
+				Application: c.Tenant.Application,
+				Package: Package{
+					ACL:       c.Tenant.Application.PackageACL,
+					ACLAllEnv: c.Tenant.Application.PackageACLAllEnv,
+				},
+				Device:    c.Device,
+				Geo:       c.Geo,
+				Urac:      c.Urac,
+				Awareness: c.Awareness,
+			}
+		}
+	}
+	if connectResponse.Host == "" {
+		connectResponse.Host = c.Awareness.Path(serviceName, version)
+		connectResponse.Headers.Key = c.Tenant.Key.EKey
+		//connectResponse.Headers.AccessToken =
+	}
+	return connectResponse
 }
