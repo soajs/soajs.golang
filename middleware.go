@@ -79,6 +79,7 @@ func (a Host) Path(args ...string) string {
 	return host
 }
 
+// Mesh connect between service
 func (c ContextData) Connect(args ...string) Connect {
 	var connectResponse Connect
 	var serviceName, version string
@@ -95,11 +96,9 @@ func (c ContextData) Connect(args ...string) Connect {
 				if version == "" && c.Awareness.InterConnect[i].Version == c.Awareness.InterConnect[i].Latest {
 					connectResponse.Host = fmt.Sprintf("%s:%d", c.Awareness.InterConnect[i].Host, c.Awareness.InterConnect[i].Port)
 					break
-				} else {
-					if version == c.Awareness.InterConnect[i].Version {
-						connectResponse.Host = fmt.Sprintf("%s:%d", c.Awareness.InterConnect[i].Host, c.Awareness.InterConnect[i].Port)
-						break
-					}
+				} else if version == c.Awareness.InterConnect[i].Version {
+					connectResponse.Host = fmt.Sprintf("%s:%d", c.Awareness.InterConnect[i].Host, c.Awareness.InterConnect[i].Port)
+					break
 				}
 			}
 		}
@@ -126,7 +125,7 @@ func (c ContextData) Connect(args ...string) Connect {
 	if connectResponse.Host == "" {
 		connectResponse.Host = c.Awareness.Path(serviceName, version)
 		connectResponse.Headers.Key = c.Tenant.Key.EKey
-		//connectResponse.Headers.AccessToken =
+		// connectResponse.Headers.AccessToken =
 	}
 	return connectResponse
 }

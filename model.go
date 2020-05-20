@@ -7,14 +7,18 @@ import (
 type (
 	// registerConf represents the config object to send to soajs gateway as post data.
 	registerConf struct {
+		Maintenance           maintenance  `json:"maintenance"`
+		InterConnect          interconnect `json:"interConnect"`
 		Name                  string       `json:"name"`
 		Group                 string       `json:"group"`
-		Port                  int          `json:"port"`
 		IP                    string       `json:"ip"`
 		Type                  string       `json:"type"`
 		Version               string       `json:"version"`
 		SubType               string       `json:"subType"`
 		Description           string       `json:"description"`
+		RequestTimeout        int          `json:"requestTimeout"`
+		RequestTimeoutRenewal int          `json:"requestTimeoutRenewal"`
+		Port                  int          `json:"port"`
 		Oauth                 bool         `json:"oauth"`
 		Urac                  bool         `json:"urac"`
 		UracProfile           bool         `json:"urac_Profile"`
@@ -24,11 +28,7 @@ type (
 		TenantProfile         bool         `json:"tenant_Profile"`
 		ProvisionACL          bool         `json:"provision_ACL"`
 		ExtKeyRequired        bool         `json:"extKeyRequired"`
-		RequestTimeout        int          `json:"requestTimeout"`
-		RequestTimeoutRenewal int          `json:"requestTimeoutRenewal"`
 		Middleware            bool         `json:"mw"`
-		Maintenance           maintenance  `json:"maintenance"`
-		InterConnect          interconnect `json:"interConnect"`
 	}
 	maintenance struct {
 		Port      maintenancePort `json:"port"`
@@ -48,7 +48,7 @@ type (
 		Version string `json:"version"`
 	}
 
-	//Awareness connect response
+	// Awareness connect response
 	Connect struct {
 		Host    string `json:"host"`
 		Headers struct {
@@ -257,6 +257,7 @@ type (
 		Profile     interface{} `json:"profile"`
 		Main        TenantMain  `json:"main"`
 	}
+	// Host represents intern connect host information.
 	Host struct {
 		Host         string             `json:"host"`
 		Port         int                `json:"port"`
