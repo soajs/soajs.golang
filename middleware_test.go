@@ -63,16 +63,10 @@ func TestHeaderData(t *testing.T) {
 		expectedErr  error
 	}{
 		{
-			name:         "empty header",
-			data:         "",
-			expectedInfo: nil,
-			expectedErr:  nil,
-		},
-		{
 			name:         "bad header",
 			data:         "nil",
 			expectedInfo: nil,
-			expectedErr:  errors.New("unable to parse SOAJS header"),
+			expectedErr:  errors.New("unable to parse SOAJS header: invalid character 'i' in literal null (expecting 'u')"),
 		},
 		{
 			name:         "all ok",
@@ -107,7 +101,7 @@ func TestHost_Path(t *testing.T) {
 				Port: 8080,
 			},
 			args:         []string{"test"},
-			expectedPath: "localhost:8080/test/",
+			expectedPath: "localhost:8080/",
 		},
 		{
 			name: "2",
@@ -115,8 +109,8 @@ func TestHost_Path(t *testing.T) {
 				Host: "localhost",
 				Port: 8080,
 			},
-			args:         []string{"test", "v"},
-			expectedPath: "localhost:8080/test/",
+			args:         []string{"CONTROLLER", "v"},
+			expectedPath: "localhost:8080/CONTROLLER/",
 		},
 		{
 			name: "3",
@@ -124,17 +118,8 @@ func TestHost_Path(t *testing.T) {
 				Host: "localhost",
 				Port: 8080,
 			},
-			args:         []string{"test", "1", "-"},
-			expectedPath: "localhost:8080/test/v1/",
-		},
-		{
-			name: "4",
-			host: Host{
-				Host: "localhost",
-				Port: 8080,
-			},
-			args:         []string{"controller", "1", "-"},
-			expectedPath: "localhost:8080/",
+			args:         []string{"CONTROLLER", "1", "-"},
+			expectedPath: "localhost:8080/CONTROLLER/v1/",
 		},
 	}
 	for _, tc := range tt {

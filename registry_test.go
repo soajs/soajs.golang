@@ -14,6 +14,7 @@ import (
 func TestNew(t *testing.T) {
 	tt := []struct {
 		name             string
+		serviceType      string
 		serviceName      string
 		envCode          string
 		envRegAPI        string
@@ -22,6 +23,7 @@ func TestNew(t *testing.T) {
 	}{
 		{
 			name:             "empty arguments",
+			serviceType:      "service",
 			serviceName:      "",
 			envCode:          "",
 			envRegAPI:        "",
@@ -30,6 +32,7 @@ func TestNew(t *testing.T) {
 		},
 		{
 			name:             "empty environment",
+			serviceType:      "service",
 			serviceName:      "test",
 			envCode:          "test",
 			envRegAPI:        "",
@@ -38,6 +41,7 @@ func TestNew(t *testing.T) {
 		},
 		{
 			name:             "bad api path",
+			serviceType:      "service",
 			serviceName:      "test",
 			envCode:          "test",
 			envRegAPI:        "localhost",
@@ -46,6 +50,7 @@ func TestNew(t *testing.T) {
 		},
 		{
 			name:             "bad api path port",
+			serviceType:      "service",
 			serviceName:      "test",
 			envCode:          "test",
 			envRegAPI:        "localhost:test",
@@ -54,18 +59,19 @@ func TestNew(t *testing.T) {
 		},
 		{
 			name:             "bad api call",
+			serviceType:      "service",
 			serviceName:      "test",
 			envCode:          "test",
 			envRegAPI:        "127.0.0.1:123",
 			expectedRegistry: nil,
-			expectedError:    errors.New("could not init registry from api gateway: Get http://127.0.0.1:123/getRegistry?env=test&serviceName=test: dial tcp 127.0.0.1:123: connect: connection refused"),
+			expectedError:    errors.New("could not init registry from api gateway: Get http://127.0.0.1:123/getRegistry?env=test&serviceName=test&type=service: dial tcp 127.0.0.1:123: connect: connection refused"),
 		},
 	}
 	lastEnvRegAPI := os.Getenv(EnvRegistryAPIAddress)
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			require.NoError(t, os.Setenv(EnvRegistryAPIAddress, tc.envRegAPI))
-			reg, err := New(context.Background(), tc.serviceName, tc.envCode, false)
+			reg, err := New(context.Background(), tc.serviceName, tc.envCode, tc.serviceType, false)
 			assert.Equal(t, tc.expectedError, err)
 			assert.Equal(t, tc.expectedRegistry, reg)
 			assert.NoError(t, os.Setenv(EnvRegistryAPIAddress, lastEnvRegAPI))
@@ -100,7 +106,7 @@ func TestNewFromConfig(t *testing.T) {
 			config:      Config{},
 			envRegAPI:   "api:123",
 			envEnv:      "env",
-			expectedErr: errors.New("could not find [Type] in your config, Type is <required>"),
+			expectedErr: errors.New("could not find [Type] in your config, type is <required>"),
 		},
 		{
 			name: "registry error",
@@ -108,7 +114,14 @@ func TestNewFromConfig(t *testing.T) {
 				Type:           "type",
 				ServiceName:    "name",
 				ServiceVersion: "v1",
-				ServicePort:    10,
+				ServicePort:    4000,
+				Maintenance: maintenance{
+					Port: maintenancePort{
+						Type: "inherit",
+					},
+					Readiness: "/heartbeat",
+				},
+				ServiceGroup: "group-a",
 			},
 			envRegAPI:   "api:123",
 			envEnv:      "env",
@@ -158,10 +171,8 @@ func TestManualDeploy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			require.NoError(t, os.Setenv(EnvDeployManual, tc.envDeployManual))
 
-			addr := registryPath{
-				address: "localhost",
-			}
-			err := manualDeploy(tc.config, &addr)
+			addr := registryPath("localhost")
+			err := manualDeploy(tc.config, addr)
 			assert.Contains(t, err.Error(), tc.expectedErr.Error())
 
 			require.NoError(t, os.Setenv(EnvDeployManual, envDeployManual))

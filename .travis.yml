@@ -1,14 +1,13 @@
 language: go
 
-env:
-  matrix:
+global:
   - GO111MODULE=on
 
 os:
 - linux
 
 go:
-- 1.11.5
+- 1.13.7
 
 git:
   depth: 1
@@ -22,7 +21,7 @@ before_script:
   - go get
   - go get golang.org/x/tools/cmd/cover
   - go get github.com/mattn/goveralls
-  - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s v1.15.0
+  - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s v1.20.1
 
 script:
   - ./bin/golangci-lint run --config .golangci.yml
