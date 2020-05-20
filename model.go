@@ -48,7 +48,7 @@ type (
 		Version string `json:"version"`
 	}
 
-	// Awareness connect response
+	// Connect represents the inter connect response
 	Connect struct {
 		Host    string `json:"host"`
 		Headers struct {

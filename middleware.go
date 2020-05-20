@@ -79,7 +79,7 @@ func (a Host) Path(args ...string) string {
 	return host
 }
 
-// Mesh connect between service
+// Connect handles the Mesh inter connect between micro service
 func (c ContextData) Connect(args ...string) Connect {
 	var connectResponse Connect
 	var serviceName, version string
