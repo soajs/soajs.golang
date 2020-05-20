@@ -1,5 +1,3 @@
-sudo: false
-
 language: go
 
 env:
@@ -15,7 +13,7 @@ go:
 git:
   depth: 1
 
-install: false
+install: skip
 
 notifications:
   email: false
