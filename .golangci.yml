@@ -1,40 +1,67 @@
 linters-settings:
   govet:
-    check-shadowing: false
+    disable:
+      - fieldalignment
   gocyclo:
     min-complexity: 20
-  maligned:
-    suggest-new: true
   gocritic:
-    color: true
-    shorterErrLocation: true
-
     enabled-tags:
-    - performance
-    - style
-    - experimental
-
+      - performance
+      - style
+      - experimental
     disabled-checks:
-    - hugeParam
+      - hugeParam
+  revive:
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: exported
+      - name: increment-decrement
+      - name: var-naming
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: indent-error-flow
+      - name: superfluous-else
+      - name: modifies-parameter
+      - name: unreachable-code
+      - name: struct-tag
+      - name: constant-logical-expr
+      - name: bool-literal-in-expr
+      - name: redefines-builtin-id
+      - name: imports-blacklist
+      - name: range-val-in-closure
+      - name: range-val-address
+      - name: waitgroup-by-value
+      - name: atomic
+      - name: call-to-gc
+      - name: duplicated-imports
+      - name: string-of-int
+      - name: defer
+      - name: unconditional-recursion
+      - name: identical-branches
 
 linters:
+  disable-all: true
   enable:
-  - golint
-  - maligned
-  - megacheck
-  - interfacer
-  - unconvert
-  - goconst
-  - misspell
-  - unparam
-  - gofmt
-  - goimports
-  - gocyclo
-  - gocritic
-  - govet
-  - unused
-  disable:
-  - gas
+    - revive           # Replacement for deprecated golint
+    - unconvert
+    - goconst
+    - misspell
+    - unparam
+    - gofmt
+    - goimports
+    - gocyclo
+    - govet
+    - unused
+    - ineffassign
+    - staticcheck
+    - errcheck
+    - gosimple
 
 issues:
   exclude-use-default: false

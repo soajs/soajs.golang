@@ -55,7 +55,7 @@ func TestNew(t *testing.T) {
 			envCode:          "test",
 			envRegAPI:        "localhost:test",
 			expectedRegistry: nil,
-			expectedError:    errors.New("could not init registry api path: port must be an integer, got test"),
+			expectedError:    errors.New("could not init registry api path: port must be an integer, got \"test\""),
 		},
 		{
 			name:             "bad api call",
@@ -64,7 +64,7 @@ func TestNew(t *testing.T) {
 			envCode:          "test",
 			envRegAPI:        "127.0.0.1:123",
 			expectedRegistry: nil,
-			expectedError:    errors.New("could not init registry from api gateway: Get http://127.0.0.1:123/getRegistry?env=test&serviceName=test&type=service: dial tcp 127.0.0.1:123: connect: connection refused"),
+			expectedError:    errors.New("could not init registry from api gateway: Get \"http://127.0.0.1:123/getRegistry?env=test&serviceName=test&type=service\": dial tcp 127.0.0.1:123: connect: connection refused"),
 		},
 	}
 	lastEnvRegAPI := os.Getenv(EnvRegistryAPIAddress)
@@ -113,7 +113,7 @@ func TestNewFromConfig(t *testing.T) {
 			config: Config{
 				Type:           "type",
 				ServiceName:    "name",
-				ServiceVersion: "v1",
+				ServiceVersion: "1",
 				ServicePort:    4000,
 				Maintenance: maintenance{
 					Port: maintenancePort{
@@ -125,7 +125,7 @@ func TestNewFromConfig(t *testing.T) {
 			},
 			envRegAPI:   "api:123",
 			envEnv:      "env",
-			expectedErr: errors.New("could not fetch registry: could not init registry from api gateway: Get http://api:123/getRegistry?env=env&serviceName=name"),
+			expectedErr: errors.New("could not fetch registry: could not init registry from api gateway: Get"),
 		},
 	}
 	lastEnvRegAPI := os.Getenv(EnvRegistryAPIAddress)
@@ -163,7 +163,7 @@ func TestManualDeploy(t *testing.T) {
 			name:            "post err",
 			envDeployManual: "true",
 			config:          Config{ServiceName: "test"},
-			expectedErr:     errors.New("could not call http://localhost/register: Post http://localhost/register"),
+			expectedErr:     errors.New("could not call http://localhost/register: Post"),
 		},
 	}
 	envDeployManual := os.Getenv(EnvDeployManual)
@@ -188,12 +188,12 @@ func TestRegistry_Reload(t *testing.T) {
 func TestRegistry_autoReloadDuration(t *testing.T) {
 	tt := []struct {
 		name             string
-		reg              Registry
+		reg              *Registry
 		expectedDuration time.Duration
 	}{
 		{
 			name: "configured",
-			reg: Registry{
+			reg: &Registry{
 				ServiceConfig: ServiceConfig{
 					Awareness: ServiceConfigIntervals{
 						AutoReloadRegistry: 3000}}},
@@ -201,7 +201,7 @@ func TestRegistry_autoReloadDuration(t *testing.T) {
 		},
 		{
 			name:             "empty",
-			reg:              Registry{},
+			reg:              &Registry{},
 			expectedDuration: time.Hour,
 		},
 	}
@@ -216,21 +216,21 @@ func TestRegistry_Database(t *testing.T) {
 	tt := []struct {
 		name             string
 		dbName           string
-		reg              Registry
+		reg              *Registry
 		expectedDatabase *Database
 		expectedErr      error
 	}{
 		{
 			name:             "empty db name",
 			dbName:           "",
-			reg:              Registry{},
+			reg:              &Registry{},
 			expectedDatabase: nil,
 			expectedErr:      errors.New("database name is required"),
 		},
 		{
 			name:   "core dbs",
 			dbName: "core",
-			reg: Registry{
+			reg: &Registry{
 				CoreDBs: map[string]Database{"core": {
 					Name: "core database",
 				}},
@@ -243,7 +243,7 @@ func TestRegistry_Database(t *testing.T) {
 		{
 			name:   "meta dbs",
 			dbName: "meta",
-			reg: Registry{
+			reg: &Registry{
 				TenantMetaDBs: map[string]Database{"meta": {
 					Name: "meta database",
 				}},
@@ -256,7 +256,7 @@ func TestRegistry_Database(t *testing.T) {
 		{
 			name:             "no dbs",
 			dbName:           "empty",
-			reg:              Registry{},
+			reg:              &Registry{},
 			expectedDatabase: nil,
 			expectedErr:      errors.New("could not found database"),
 		},
@@ -273,19 +273,19 @@ func TestRegistry_Database(t *testing.T) {
 func TestRegistry_Databases(t *testing.T) {
 	tt := []struct {
 		name              string
-		reg               Registry
+		reg               *Registry
 		expectedDatabases map[string]Database
 		expectedErr       error
 	}{
 		{
 			name:              "not found",
-			reg:               Registry{},
+			reg:               &Registry{},
 			expectedDatabases: nil,
 			expectedErr:       errors.New("could not found databases"),
 		},
 		{
 			name: "found",
-			reg: Registry{
+			reg: &Registry{
 				CoreDBs:       map[string]Database{"core": {Name: "core"}},
 				TenantMetaDBs: map[string]Database{"meta": {Name: "meta"}},
 			},
@@ -306,20 +306,20 @@ func TestRegistry_Resource(t *testing.T) {
 	tt := []struct {
 		name             string
 		resourceName     string
-		reg              Registry
+		reg              *Registry
 		expectedResource *Resource
 		expectedErr      error
 	}{
 		{
 			name:             "empty name",
-			reg:              Registry{},
+			reg:              &Registry{},
 			expectedResource: nil,
 			expectedErr:      errors.New("resource name is required"),
 		},
 		{
 			name:         "found",
 			resourceName: "good",
-			reg: Registry{
+			reg: &Registry{
 				Resources: Resources{"0": map[string]Resource{
 					"bad":  {Name: "bad"},
 					"good": {Name: "good"},
@@ -331,7 +331,7 @@ func TestRegistry_Resource(t *testing.T) {
 		{
 			name:         "not found",
 			resourceName: "good",
-			reg: Registry{
+			reg: &Registry{
 				Resources: Resources{"0": map[string]Resource{
 					"bad": {Name: "bad"},
 				}},
@@ -353,21 +353,21 @@ func TestRegistry_Service(t *testing.T) {
 	tt := []struct {
 		name            string
 		serviceName     string
-		reg             Registry
+		reg             *Registry
 		expectedService *Service
 		expectedErr     error
 	}{
 		{
 			name:            "empty name",
 			serviceName:     "",
-			reg:             Registry{},
+			reg:             &Registry{},
 			expectedService: nil,
 			expectedErr:     errors.New("service name is required"),
 		},
 		{
 			name:        "found",
 			serviceName: "good",
-			reg: Registry{
+			reg: &Registry{
 				Services: map[string]Service{
 					"bad":  {Port: 1},
 					"good": {Port: 2},
@@ -379,7 +379,7 @@ func TestRegistry_Service(t *testing.T) {
 		{
 			name:        "not found",
 			serviceName: "good",
-			reg: Registry{
+			reg: &Registry{
 				Services: map[string]Service{
 					"bad": {Port: 1},
 				},

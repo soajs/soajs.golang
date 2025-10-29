@@ -58,7 +58,7 @@ func TestConfig_Validate(t *testing.T) {
 				ServicePort:    4000,
 				ServiceVersion: "version",
 			},
-			expectedErr: errors.New("error with [ServiceVersion] in your config, version syntax is [[0-9]+(.[0-9]+)?]"),
+			expectedErr: errors.New("error with [ServiceVersion] in your config, version syntax is [^[0-9]+(\\.[0-9]+)?$]"),
 		},
 		{
 			name: "empty maintenance readiness",

@@ -1,13 +1,16 @@
 language: go
 
-global:
-  - GO111MODULE=on
+env:
+  global:
+    - GO111MODULE=on
 
 os:
-- linux
+  - linux
 
 go:
-- 1.13.7
+  - "1.21.x"
+  - "1.22.x"
+  - "1.23.x"
 
 git:
   depth: 1
@@ -18,12 +21,14 @@ notifications:
   email: false
 
 before_script:
-  - go get
-  - go get golang.org/x/tools/cmd/cover
-  - go get github.com/mattn/goveralls
-  - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s v1.20.1
+  - go install golang.org/x/tools/cmd/cover@latest
+  - go install github.com/mattn/goveralls@latest
+  - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.64.8
 
 script:
-  - ./bin/golangci-lint run --config .golangci.yml
+  - golangci-lint run --config .golangci.yml
   - go test -v -covermode=count -coverprofile=coverage.out ./...
-  - "$HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci"
+  - goveralls -coverprofile=coverage.out -service=travis-ci
+
+jobs:
+  fast_fail: true

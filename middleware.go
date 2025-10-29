@@ -56,6 +56,9 @@ func headerData(r *http.Request) (*headerInfo, error) {
 	if err := json.NewDecoder(info).Decode(&d); err != nil {
 		return nil, fmt.Errorf("unable to parse SOAJS header: %v", err)
 	}
+	if d == nil {
+		return nil, fmt.Errorf("SOAJS header is empty or null")
+	}
 	return d, nil
 }
 
@@ -90,42 +93,51 @@ func (c ContextData) Connect(args ...string) Connect {
 		serviceName = args[0]
 		version = args[1]
 	}
+
+	// Try to find service in InterConnect mesh for direct service-to-service communication
+	foundInMesh := false
 	if c.Awareness.InterConnect != nil {
 		for i := 0; i < len(c.Awareness.InterConnect); i++ {
-			if serviceName == c.Awareness.InterConnect[i].Name {
-				if version == "" && c.Awareness.InterConnect[i].Version == c.Awareness.InterConnect[i].Latest {
-					connectResponse.Host = fmt.Sprintf("%s:%d", c.Awareness.InterConnect[i].Host, c.Awareness.InterConnect[i].Port)
-					break
-				} else if version == c.Awareness.InterConnect[i].Version {
-					connectResponse.Host = fmt.Sprintf("%s:%d", c.Awareness.InterConnect[i].Host, c.Awareness.InterConnect[i].Port)
+			service := c.Awareness.InterConnect[i]
+			if serviceName == service.Name {
+				// Match by version: either request latest version or specific version
+				isLatestVersionMatch := version == "" && service.Version == service.Latest
+				isSpecificVersionMatch := version != "" && version == service.Version
+
+				if isLatestVersionMatch || isSpecificVersionMatch {
+					connectResponse.Host = fmt.Sprintf("%s:%d", service.Host, service.Port)
+					foundInMesh = true
 					break
 				}
 			}
 		}
-		if connectResponse.Host != "" {
-			connectResponse.Headers.SoajsInjectobj = headerInfo{
-				Tenant: c.Tenant,
-				Key: Key{
-					IKey:   c.Tenant.Key.IKey,
-					EKey:   c.Tenant.Key.EKey,
-					Config: c.ServicesConfig,
-				},
-				Application: c.Tenant.Application,
-				Package: Package{
-					ACL:       c.Tenant.Application.PackageACL,
-					ACLAllEnv: c.Tenant.Application.PackageACLAllEnv,
-				},
-				Device:    c.Device,
-				Geo:       c.Geo,
-				Urac:      c.Urac,
-				Awareness: c.Awareness,
-			}
-		}
 	}
-	if connectResponse.Host == "" {
+
+	// Service found in mesh: use direct connection with full SOAJS context
+	if foundInMesh {
+		connectResponse.Headers.SoajsInjectobj = headerInfo{
+			Tenant: c.Tenant,
+			Key: Key{
+				IKey:   c.Tenant.Key.IKey,
+				EKey:   c.Tenant.Key.EKey,
+				Config: c.ServicesConfig,
+			},
+			Application: c.Tenant.Application,
+			Package: Package{
+				ACL:       c.Tenant.Application.PackageACL,
+				ACLAllEnv: c.Tenant.Application.PackageACLAllEnv,
+			},
+			Device:    c.Device,
+			Geo:       c.Geo,
+			Urac:      c.Urac,
+			Awareness: c.Awareness,
+		}
+	} else {
+		// Service not found in mesh: fallback to gateway routing via Awareness.Path
 		connectResponse.Host = c.Awareness.Path(serviceName, version)
 		connectResponse.Headers.Key = c.Tenant.Key.EKey
 		// connectResponse.Headers.AccessToken =
 	}
+
 	return connectResponse
 }

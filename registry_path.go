@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
@@ -22,8 +22,11 @@ func registryAddress() (registryPath, error) {
 		return "", fmt.Errorf("invalid format for %s. Got [%s], expected [hostname:port]", EnvRegistryAPIAddress, registryAPI)
 	}
 	port := strings.Split(registryAPI, ":")[1]
+	if port == "" {
+		return "", fmt.Errorf("port is empty in %s. Got [%s], expected [hostname:port]", EnvRegistryAPIAddress, registryAPI)
+	}
 	if _, err := strconv.Atoi(port); err != nil {
-		return "", fmt.Errorf("port must be an integer, got %s", port)
+		return "", fmt.Errorf("port must be an integer, got %q", port)
 	}
 	return registryPath(registryAPI), nil
 }
@@ -38,7 +41,10 @@ func (r registryPath) getRegistry(serviceName, envCode, serviceType string) stri
 
 func registryResponse(res *http.Response) (*Registry, error) {
 	if res.StatusCode < 200 || res.StatusCode > 299 {
-		b, _ := ioutil.ReadAll(res.Body)
+		b, err := io.ReadAll(res.Body)
+		if err != nil {
+			return nil, fmt.Errorf("non 2xx status code: %d (unable to read response body: %v)", res.StatusCode, err)
+		}
 		return nil, fmt.Errorf("non 2xx status code: %d %s", res.StatusCode, b)
 	}
 	var regRes registryAPIResponse

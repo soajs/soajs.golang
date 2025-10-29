@@ -1,6 +1,7 @@
 package soajsgo
 
 import (
+	"sync"
 	"time"
 )
 
@@ -79,6 +80,7 @@ type (
 	}
 	// Registry represents registry structure.
 	Registry struct {
+		mu            sync.RWMutex
 		TimeLoaded    int64  `json:"timeLoaded"`
 		Name          string `json:"name"`
 		Environment   string `json:"environment"`
@@ -138,7 +140,7 @@ type (
 	ServiceConfigIntervals struct {
 		CacheTTL            int           `json:"cacheTTL"`
 		HealthCheckInterval int           `json:"healthCheckInterval"`
-		AutoReloadRegistry  time.Duration `json:"autoRelaodRegistry"`
+		AutoReloadRegistry  time.Duration `json:"autoReloadRegistry"`
 		MaxLogCount         int           `json:"maxLogCount"`
 		AutoRegisterService bool          `json:"autoRegisterService"`
 	}

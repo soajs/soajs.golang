@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+var httpClient = &http.Client{
+	Timeout: 30 * time.Second,
+}
+
 // New creates and initializes new registry by service name and code.
 // This function starts registry auto reload every AutoReloadRegistry if turnOnAutoReload set as true. You can break
 // this process using context.
@@ -25,7 +29,7 @@ func New(ctx context.Context, serviceName, envCode, serviceType string, turnOnAu
 	if err != nil {
 		return nil, fmt.Errorf("could not init registry api path: %v", err)
 	}
-	res, err := http.Get(addr.getRegistry(serviceName, envCode, serviceType))
+	res, err := httpClient.Get(addr.getRegistry(serviceName, envCode, serviceType))
 	if err != nil {
 		return nil, fmt.Errorf("could not init registry from api gateway: %v", err)
 	}
@@ -105,7 +109,7 @@ func manualDeploy(config Config, addr registryPath) error {
 		if err != nil {
 			return fmt.Errorf("could not marshal manual deploy auto register config: %v", err)
 		}
-		res, err := http.Post(addr.register(), "application/json", bytes.NewBuffer(d))
+		res, err := httpClient.Post(addr.register(), "application/json", bytes.NewBuffer(d))
 		if err != nil {
 			return fmt.Errorf("could not call %s: %v", addr.register(), err)
 		}
@@ -124,8 +128,21 @@ func (reg *Registry) Reload() error {
 	if err != nil {
 		return err
 	}
-	// TODO: potential concurrency problems here.
-	*reg = *r
+	// Thread-safe update of registry data
+	reg.mu.Lock()
+	defer reg.mu.Unlock()
+
+	reg.TimeLoaded = r.TimeLoaded
+	reg.Name = r.Name
+	reg.Environment = r.Environment
+	reg.ServiceType = r.ServiceType
+	reg.CoreDBs = r.CoreDBs
+	reg.TenantMetaDBs = r.TenantMetaDBs
+	reg.ServiceConfig = r.ServiceConfig
+	reg.Custom = r.Custom
+	reg.Resources = r.Resources
+	reg.Services = r.Services
+
 	return nil
 }
 
@@ -147,18 +164,27 @@ func (reg *Registry) autoReload(ctx context.Context) {
 	}
 }
 
-func (reg Registry) autoReloadDuration() time.Duration {
+func (reg *Registry) autoReloadDuration() time.Duration {
+	reg.mu.RLock()
+	defer reg.mu.RUnlock()
 	if reg.ServiceConfig.Awareness.AutoReloadRegistry > 0 {
-		return reg.ServiceConfig.Awareness.AutoReloadRegistry * time.Millisecond
+		duration := reg.ServiceConfig.Awareness.AutoReloadRegistry * time.Millisecond
+		// Ensure minimum reload interval of 1 second to prevent performance issues
+		if duration < time.Second {
+			return time.Second
+		}
+		return duration
 	}
 	return time.Hour
 }
 
 // Database returns one database by name.
-func (reg Registry) Database(dbName string) (*Database, error) {
+func (reg *Registry) Database(dbName string) (*Database, error) {
 	if dbName == "" {
 		return nil, errors.New("database name is required")
 	}
+	reg.mu.RLock()
+	defer reg.mu.RUnlock()
 	if db, ok := reg.CoreDBs[dbName]; ok {
 		return &db, nil
 	}
@@ -169,7 +195,9 @@ func (reg Registry) Database(dbName string) (*Database, error) {
 }
 
 // Databases returns all databases.
-func (reg Registry) Databases() (map[string]Database, error) {
+func (reg *Registry) Databases() (map[string]Database, error) {
+	reg.mu.RLock()
+	defer reg.mu.RUnlock()
 	dbs := make(map[string]Database, len(reg.CoreDBs)+len(reg.TenantMetaDBs))
 	for dbName := range reg.CoreDBs {
 		dbs[dbName] = reg.CoreDBs[dbName]
@@ -184,10 +212,12 @@ func (reg Registry) Databases() (map[string]Database, error) {
 }
 
 // Resource returns one resource.
-func (reg Registry) Resource(name string) (*Resource, error) {
+func (reg *Registry) Resource(name string) (*Resource, error) {
 	if name == "" {
 		return nil, errors.New("resource name is required")
 	}
+	reg.mu.RLock()
+	defer reg.mu.RUnlock()
 	for _, resourceList := range reg.Resources {
 		for resourceKey, resourceData := range resourceList {
 			if resourceKey == name {
@@ -199,10 +229,12 @@ func (reg Registry) Resource(name string) (*Resource, error) {
 }
 
 // Service returns one service by name.
-func (reg Registry) Service(name string) (*Service, error) {
+func (reg *Registry) Service(name string) (*Service, error) {
 	if name == "" {
 		return nil, errors.New("service name is required")
 	}
+	reg.mu.RLock()
+	defer reg.mu.RUnlock()
 	if s, ok := reg.Services[name]; ok {
 		return &s, nil
 	}
