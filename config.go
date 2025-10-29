@@ -41,7 +41,7 @@ type (
 func (c *Config) Validate() error {
 
 	var validator = regexp.MustCompile(`^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$`)
-	var versionRegexp = regexp.MustCompile(`[0-9]+(.[0-9]+)?`)
+	var versionRegexp = regexp.MustCompile(`^[0-9]+(\.[0-9]+)?$`)
 
 	if c.Type == "" {
 		return errors.New("could not find [Type] in your config, type is <required>")

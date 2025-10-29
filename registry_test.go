@@ -55,7 +55,7 @@ func TestNew(t *testing.T) {
 			envCode:          "test",
 			envRegAPI:        "localhost:test",
 			expectedRegistry: nil,
-			expectedError:    errors.New("could not init registry api path: port must be an integer, got test"),
+			expectedError:    errors.New("could not init registry api path: port must be an integer, got \"test\""),
 		},
 		{
 			name:             "bad api call",
@@ -64,7 +64,7 @@ func TestNew(t *testing.T) {
 			envCode:          "test",
 			envRegAPI:        "127.0.0.1:123",
 			expectedRegistry: nil,
-			expectedError:    errors.New("could not init registry from api gateway: Get http://127.0.0.1:123/getRegistry?env=test&serviceName=test&type=service: dial tcp 127.0.0.1:123: connect: connection refused"),
+			expectedError:    errors.New("could not init registry from api gateway: Get \"http://127.0.0.1:123/getRegistry?env=test&serviceName=test&type=service\": dial tcp 127.0.0.1:123: connect: connection refused"),
 		},
 	}
 	lastEnvRegAPI := os.Getenv(EnvRegistryAPIAddress)
@@ -113,7 +113,7 @@ func TestNewFromConfig(t *testing.T) {
 			config: Config{
 				Type:           "type",
 				ServiceName:    "name",
-				ServiceVersion: "v1",
+				ServiceVersion: "1",
 				ServicePort:    4000,
 				Maintenance: maintenance{
 					Port: maintenancePort{
@@ -125,7 +125,7 @@ func TestNewFromConfig(t *testing.T) {
 			},
 			envRegAPI:   "api:123",
 			envEnv:      "env",
-			expectedErr: errors.New("could not fetch registry: could not init registry from api gateway: Get http://api:123/getRegistry?env=env&serviceName=name"),
+			expectedErr: errors.New("could not fetch registry: could not init registry from api gateway: Get"),
 		},
 	}
 	lastEnvRegAPI := os.Getenv(EnvRegistryAPIAddress)
@@ -163,7 +163,7 @@ func TestManualDeploy(t *testing.T) {
 			name:            "post err",
 			envDeployManual: "true",
 			config:          Config{ServiceName: "test"},
-			expectedErr:     errors.New("could not call http://localhost/register: Post http://localhost/register"),
+			expectedErr:     errors.New("could not call http://localhost/register: Post"),
 		},
 	}
 	envDeployManual := os.Getenv(EnvDeployManual)

@@ -1,6 +1,7 @@
 package soajsgo
 
 import (
+	"sync"
 	"time"
 )
 
@@ -79,16 +80,17 @@ type (
 	}
 	// Registry represents registry structure.
 	Registry struct {
-		TimeLoaded    int64  `json:"timeLoaded"`
-		Name          string `json:"name"`
-		Environment   string `json:"environment"`
+		mu            sync.RWMutex
+		TimeLoaded    int64                `json:"timeLoaded"`
+		Name          string               `json:"name"`
+		Environment   string               `json:"environment"`
 		ServiceType   string
-		CoreDBs       map[string]Database `json:"coreDB"`
-		TenantMetaDBs map[string]Database `json:"tenantMetaDB"`
-		ServiceConfig ServiceConfig       `json:"serviceConfig"`
-		Custom        CustomRegistries    `json:"custom"`
-		Resources     Resources           `json:"resources"`
-		Services      map[string]Service  `json:"services"`
+		CoreDBs       map[string]Database  `json:"coreDB"`
+		TenantMetaDBs map[string]Database  `json:"tenantMetaDB"`
+		ServiceConfig ServiceConfig        `json:"serviceConfig"`
+		Custom        CustomRegistries     `json:"custom"`
+		Resources     Resources            `json:"resources"`
+		Services      map[string]Service   `json:"services"`
 	}
 	// Database represents a Database structure with configuration fields.
 	Database struct {
@@ -138,7 +140,7 @@ type (
 	ServiceConfigIntervals struct {
 		CacheTTL            int           `json:"cacheTTL"`
 		HealthCheckInterval int           `json:"healthCheckInterval"`
-		AutoReloadRegistry  time.Duration `json:"autoRelaodRegistry"`
+		AutoReloadRegistry  time.Duration `json:"autoReloadRegistry"`
 		MaxLogCount         int           `json:"maxLogCount"`
 		AutoRegisterService bool          `json:"autoRegisterService"`
 	}
