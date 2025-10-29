@@ -13,25 +13,25 @@ func TestRegistry_Middleware(t *testing.T) {
 	tt := []struct {
 		name            string
 		headerInfo      string
-		reg             Registry
+		reg             *Registry
 		expectedSoaData ContextData
 	}{
 		{
 			name:            "bad header",
 			headerInfo:      "nil",
-			reg:             Registry{},
+			reg:             &Registry{},
 			expectedSoaData: ContextData{},
 		},
 		{
 			name:            "empty header",
 			headerInfo:      "",
-			reg:             Registry{},
+			reg:             &Registry{},
 			expectedSoaData: ContextData{},
 		},
 		{
 			name:            "all ok",
 			headerInfo:      `{"device":"iPhone"}`,
-			reg:             Registry{Name: "ok"},
+			reg:             &Registry{Name: "ok"},
 			expectedSoaData: ContextData{Device: "iPhone", Reg: &Registry{Name: "ok"}},
 		},
 	}

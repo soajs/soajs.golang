@@ -1,3 +1,4 @@
+// Package soajsgo provides middleware for integrating Go services with the SOAJS framework.
 package soajsgo
 
 import (
