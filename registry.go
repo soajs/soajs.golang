@@ -240,3 +240,19 @@ func (reg *Registry) Service(name string) (*Service, error) {
 	}
 	return nil, errors.New("service not found")
 }
+
+// GetCustom returns one custom registry by name. If name is empty, returns all custom registries.
+func (reg *Registry) GetCustom(name string) (interface{}, error) {
+	reg.mu.RLock()
+	defer reg.mu.RUnlock()
+	if name != "" {
+		if custom, ok := reg.Custom[name]; ok {
+			return &custom, nil
+		}
+		return nil, errors.New("custom registry not found")
+	}
+	if len(reg.Custom) > 0 {
+		return reg.Custom, nil
+	}
+	return nil, errors.New("no custom registries found")
+}

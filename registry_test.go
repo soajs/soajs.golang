@@ -396,3 +396,92 @@ func TestRegistry_Service(t *testing.T) {
 		})
 	}
 }
+
+func TestRegistry_GetCustom(t *testing.T) {
+	tt := []struct {
+		name           string
+		customName     string
+		reg            *Registry
+		expectedCustom interface{}
+		expectedErr    error
+	}{
+		{
+			name:       "get specific custom - found",
+			customName: "myCustom",
+			reg: &Registry{
+				Custom: CustomRegistries{
+					"myCustom": {
+						Name:   "myCustom",
+						Value:  map[string]interface{}{"key": "value"},
+						Locked: true,
+					},
+					"other": {
+						Name:  "other",
+						Value: "test",
+					},
+				},
+			},
+			expectedCustom: &CustomRegistry{
+				Name:   "myCustom",
+				Value:  map[string]interface{}{"key": "value"},
+				Locked: true,
+			},
+			expectedErr: nil,
+		},
+		{
+			name:       "get specific custom - not found",
+			customName: "missing",
+			reg: &Registry{
+				Custom: CustomRegistries{
+					"other": {
+						Name:  "other",
+						Value: "test",
+					},
+				},
+			},
+			expectedCustom: nil,
+			expectedErr:    errors.New("custom registry not found"),
+		},
+		{
+			name:       "get all custom registries",
+			customName: "",
+			reg: &Registry{
+				Custom: CustomRegistries{
+					"custom1": {
+						Name:  "custom1",
+						Value: "value1",
+					},
+					"custom2": {
+						Name:  "custom2",
+						Value: "value2",
+					},
+				},
+			},
+			expectedCustom: CustomRegistries{
+				"custom1": {
+					Name:  "custom1",
+					Value: "value1",
+				},
+				"custom2": {
+					Name:  "custom2",
+					Value: "value2",
+				},
+			},
+			expectedErr: nil,
+		},
+		{
+			name:           "no custom registries found",
+			customName:     "",
+			reg:            &Registry{Custom: CustomRegistries{}},
+			expectedCustom: nil,
+			expectedErr:    errors.New("no custom registries found"),
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			custom, err := tc.reg.GetCustom(tc.customName)
+			assert.Equal(t, tc.expectedErr, err)
+			assert.Equal(t, tc.expectedCustom, custom)
+		})
+	}
+}
