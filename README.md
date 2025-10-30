@@ -154,7 +154,7 @@ handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 ### Registry Methods
 
-The registry provides several methods for accessing databases, services, and resources:
+The registry provides several methods for accessing databases, services, resources, and custom configurations:
 
 ```go
 // Get a database by name
@@ -176,6 +176,24 @@ if err == nil {
 
 // Get a resource by name
 resource, err := registry.Resource("myresource")
+
+// Get a specific custom registry by name
+custom, err := registry.GetCustom("myCustom")
+if err == nil {
+    customReg := custom.(*soajsgo.CustomRegistry)
+    value := customReg.Value
+    locked := customReg.Locked
+}
+
+// Get all custom registries
+allCustom, err := registry.GetCustom("")
+if err == nil {
+    customRegistries := allCustom.(soajsgo.CustomRegistries)
+    for name, customReg := range customRegistries {
+        // Access custom registry data
+        fmt.Println(name, customReg.Value)
+    }
+}
 
 // Manually reload registry
 err = registry.Reload()
