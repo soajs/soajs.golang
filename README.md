@@ -83,6 +83,23 @@ func main() {
 }
 ```
 
+## Examples
+
+Complete working examples are available in the [examples](./examples) directory:
+
+- **[basic_service.go](./examples/basic_service.go)** - Full microservice using standard `net/http`
+- **[gin_service.go](./examples/gin_service.go)** - Microservice using the Gin Web Framework
+
+Each example demonstrates:
+- Service initialization and configuration
+- Middleware integration
+- Accessing SOAJS context data (tenant, user, device, geo)
+- Database and service discovery
+- Custom registry configuration
+- Health checks and graceful shutdown
+
+See the [examples README](./examples/README.md) for detailed documentation and usage instructions.
+
 ## Usage
 
 ### Basic Setup
