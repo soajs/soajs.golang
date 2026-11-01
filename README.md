@@ -243,22 +243,44 @@ type Config struct {
     RequestTimeoutRenewal int          // Request timeout renewal
     Awareness             bool         // Awareness enabled
     Maintenance           Maintenance  // Maintenance configuration
+    SwaggerFilename       string       // Swagger / OpenAPI file served on GET /mcp/tools (default /swagger.yml)
 }
 ```
 
+## MCP Tools (GET /mcp/tools)
+
+The SOAJS gateway can list a service's APIs as MCP tools for AI agents, filtered by each tenant's
+package and each user's ACL. A service built with this middleware describes its APIs with its
+Swagger 2.0 or OpenAPI 3 document; the middleware serves it on `GET /mcp/tools` and the gateway
+turns it into tools.
+
+- `NewFromConfig` sets it up from the config: `"swaggerFilename": "/swagger.yml"` (the default),
+  relative to the folder the service runs from.
+- With `New`, set it yourself:
+
+  ```go
+  reg.MCP = &soajsgo.MCPTools{ServiceName: "my-service", ServiceVersion: "1", SwaggerFilename: "/api/swagger.json"}
+  ```
+
+  `SwaggerDocument` (the document content) wins over `SwaggerFilename`. Without `reg.MCP` the
+  middleware leaves `/mcp/tools` to your app.
+- A JSON document is sent parsed, YAML as text. No document, or an invalid JSON file: the answer has
+  `"tools": []`, the service has no tools.
+- Only the gateway's own call is answered. A client request to `/<service>/mcp/tools` comes through
+  the gateway with the `soajsinjectobj` header and goes to your app like any other request
+  (`MCPTools` used as a handler on its own answers it with 404).
+
 ## Environment Variables
 
-The following environment variables are required:
-
-- `SOAJS_ENV`: Environment code (e.g., "dev", "staging", "production")
-- `SOAJS_REGISTRY_API`: Registry API endpoint (e.g., "http://controller:5000")
-- `SOAJS_DEPLOY_MANUAL`: Manual deployment flag ("true" or "false")
+- `SOAJS_ENV` (required): Environment code (e.g., "dev", "staging", "production")
+- `SOAJS_REGISTRY_API` (required): the gateway's maintenance address as `hostname:port` (e.g., "controller:5000")
+- `SOAJS_DEPLOY_MANUAL` (optional): "true" registers the service with the gateway; not set means "false"
 
 Example:
 
 ```bash
 export SOAJS_ENV=dev
-export SOAJS_REGISTRY_API=http://localhost:5000
+export SOAJS_REGISTRY_API=localhost:5000
 export SOAJS_DEPLOY_MANUAL=true
 ```
 
@@ -301,15 +323,16 @@ goimports -w .
 
 ## CI/CD
 
-This project uses Travis CI for continuous integration, testing against:
-- Go 1.21.x
-- Go 1.22.x
-- Go 1.23.x
+GitHub Actions, like the other SOAJS repositories:
 
-Each build runs:
-- Linting with golangci-lint v1.64.8
-- Unit tests with coverage reporting
-- Coverage reports to Coveralls
+- **CI** (`.github/workflows/ci.yml`), on pushes to `master`, `develop` and `feature/*` and on pull
+  requests: golangci-lint v1.64.8 (with Go 1.24) and `go test -race` on Go 1.21, 1.24 and the latest
+  stable release.
+- **Release** (`.github/workflows/release.yml`), on pushes to `release/*`: the same checks, then the
+  tag `v<Version>` from `version.go` and a GitHub release. Go modules resolve versions from these
+  tags, so bump `Version` before releasing.
+
+Branches: work on `develop`, merge to `master`, then to `release/v1.x`.
 
 ## Documentation
 
