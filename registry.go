@@ -67,12 +67,21 @@ func NewFromConfig(ctx context.Context, config Config) (*Registry, error) {
 	if err != nil {
 		return nil, err
 	}
+	reg.MCP = &MCPTools{
+		ServiceName:     config.ServiceName,
+		ServiceVersion:  config.ServiceVersion,
+		SwaggerFilename: config.SwaggerFilename,
+	}
 	return reg, nil
 }
 
 // nolint: errcheck
 func manualDeploy(config Config, addr registryPath) error {
 	manualDeploySrt := os.Getenv(EnvDeployManual)
+	if manualDeploySrt == "" {
+		// not set: the service is not deployed manually, nothing to register
+		return nil
+	}
 	manualDeploy, err := strconv.ParseBool(manualDeploySrt)
 	if err != nil {
 		return fmt.Errorf("could not parse %s environment variable: %v", EnvDeployManual, err)
