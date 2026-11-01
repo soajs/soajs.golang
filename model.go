@@ -91,6 +91,8 @@ type (
 		Custom        CustomRegistries    `json:"custom"`
 		Resources     Resources           `json:"resources"`
 		Services      map[string]Service  `json:"services"`
+		// MCP answers GET /mcp/tools in Middleware; set by NewFromConfig, nil means the app handles the route.
+		MCP *MCPTools `json:"-"`
 	}
 	// Database represents a Database structure with configuration fields.
 	Database struct {
