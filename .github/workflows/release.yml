@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    branches: [ release, release/* ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.8
+          args: --config .golangci.yml
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ '1.21', '1.24', 'stable' ]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Run tests
+        run: go test -race ./...
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [ lint, test ]
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version from version.go
+        id: version
+        run: |
+          VERSION=$(sed -n 's/^const Version = "\(.*\)"$/\1/p' version.go)
+          if [ -z "$VERSION" ]; then echo "no version in version.go"; exit 1; fi
+          echo "TAG=v${VERSION}" >> $GITHUB_OUTPUT
+          echo "Tag: v${VERSION}"
+
+      - name: Create Git tag
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.version.outputs.TAG }} || true
+
+      - name: Push tag
+        run: git push origin ${{ steps.version.outputs.TAG }} || true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.TAG }}
+          name: Release ${{ steps.version.outputs.TAG }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

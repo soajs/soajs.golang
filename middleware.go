@@ -24,6 +24,10 @@ const (
 // Middleware is http middleware that gets triggered per request.
 func (reg *Registry) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if reg.MCP != nil && isMCPToolsRequest(r) {
+			reg.MCP.ServeHTTP(w, r)
+			return
+		}
 		d, err := headerData(r)
 		if err != nil {
 			next.ServeHTTP(w, r)

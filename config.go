@@ -31,7 +31,9 @@ type (
 		RequestTimeoutRenewal int          `json:"requestTimeoutRenewal"`
 		Maintenance           maintenance  `json:"maintenance"`
 		InterConnect          interconnect `json:"interConnect"`
-		Prerequisites         struct {
+		// SwaggerFilename is the Swagger / OpenAPI file served on GET /mcp/tools (default /swagger.yml).
+		SwaggerFilename string `json:"swaggerFilename"`
+		Prerequisites   struct {
 			CPU    string `json:"cpu"`
 			Memory string `json:"memory"`
 		} `json:"prerequisites"`
